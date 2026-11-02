@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Secretos y variables de entorno
+.env
+.env.*
+
+# IDE y sistema
+.vscode/
+.idea/
+.DS_Store
+
+# Claude Code
+.claude/
