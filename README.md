@@ -16,7 +16,7 @@ Cada versión es un archivo independiente (`lagent-vXXX.py`) que agrega una capa
 
 | Versión | Archivo | Qué agrega |
 |---------|---------|------------|
-| v000 | [lagent-v000.py](lagent-v000.py) | El sistema conversacional más simple posible con `litellm`. Cada mensaje es independiente: sin memoria ni contexto. |
+| v000 | [lagent-v000.py](lagent-v000.py) | El sistema conversacional más simple posible con `litellm`. Cada mensaje es independiente: sin memoria ni contexto. Incluye comandos básicos para controlar el chat. |
 
 > Esta tabla crece a medida que el agente evoluciona.
 
@@ -27,6 +27,7 @@ Cada versión es un archivo independiente (`lagent-vXXX.py`) que agrega una capa
 - Variables de entorno:
   - `API_KEY`: clave de la API del proveedor.
   - `BASE_URL`: URL base del modelo.
+  - `MODEL` (opcional): modelo a usar, con el formato `proveedor/modelo`. Por defecto `anthropic/claude-haiku-5-5`.
 
 ## Uso
 
@@ -35,6 +36,19 @@ export API_KEY="tu-clave"
 export BASE_URL="https://tu-endpoint"
 python lagent-v000.py
 ```
+
+Escribe un mensaje después del prompt `>>>` y presiona Enter para enviarlo al modelo. Si solo presionas Enter, no se envía nada.
+
+### Comandos
+
+Los comandos empiezan con `/` y no se envían al modelo. No distinguen mayúsculas de minúsculas.
+
+| Comando | Qué hace |
+|---------|----------|
+| `/help` | Muestra los comandos disponibles. |
+| `/exit` o `/quit` | Sale del chat. |
+
+Cualquier otro texto que empiece con `/` muestra `Comando desconocido` y no se envía al modelo. También puedes salir con `Ctrl+C` o `Ctrl+D`.
 
 ## Objetivo
 
