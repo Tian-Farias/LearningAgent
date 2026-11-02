@@ -9,9 +9,11 @@ import litellm  # Se usa para interactuar con muchos modelos de lenguaje de mane
 # para no dejar datos sensibles escritos en el código.
 API_KEY = os.environ.get("API_KEY")
 BASE_URL = os.environ.get("BASE_URL")
-# Modelo a utilizar, con el formato "proveedor/modelo" que usa litellm.
+
+#  Modelo a utilizar, con el formato "proveedor/modelo" que usa litellm.
 # Se puede cambiar con la variable de entorno MODEL sin tocar el código.
 MODEL = os.environ.get("MODEL", "anthropic/claude-haiku-5-5")
+
 # Instrucciones generales para el modelo.
 SYSTEM_PROMPT = "Eres un asistente útil."
 
@@ -41,24 +43,26 @@ def send_message(system_prompt, user_message):
     return response.choices[0].message.content # type: ignore
 
 # Sistema de comandos basicos para controlar el chat.
-# Devuelve None si el texto no es un comando (se envía al modelo),
-# "exit" si hay que salir del chat, o "handled" si el comando ya se atendió.
+# Devuelve:
+#   - None: el texto no es un comando, hay que enviarlo al modelo.
+#   - True: era un comando de salida, hay que terminar el chat.
+#   - False: era un comando (o uno desconocido) ya atendido, el chat continúa.
 def handle_command(user_input):
     command = user_input.lower()
     if command in ["/exit", "/quit"]:
         print("Saliendo del chat...")
-        return "exit"
+        return True
     # Muestra los comandos disponibles.
     elif command == "/help":
         print("Comandos disponibles:")
         print("/exit o /quit: Salir del chat.")
         print("/help: Mostrar esta ayuda.")
-        return "handled"
+        return False
     # Cualquier otra cosa que empiece con "/" es un comando mal escrito:
     # no se manda al modelo.
     elif command.startswith("/"):
         print(f"Comando desconocido: {command}. Usa /help.")
-        return "handled"
+        return False
     return None
 
 # Función principal: bucle de chat en la terminal.
@@ -72,21 +76,27 @@ def main():
             # Si el usuario solo presiona Enter, no se envía nada.
             if not user_input:
                 continue
+
+            # Si el texto es un comando, handle_command lo atiende y devuelve
+            # True (salir) o False (seguir); si no lo es, devuelve None.
             result = handle_command(user_input)
-            if result == "exit":
+
+            if result is True:
                 break
-            # Si fue un comando, se vuelve a pedir un mensaje.
-            if result == "handled":
+            elif result is False:
                 continue
-            # Si no es un comando, se trata como un mensaje para el modelo.
+
+            # Si no es un comando (result es None), se trata como un mensaje para el modelo.
             # El error se muestra en pantalla pero no se trata como respuesta del modelo.
             try:
                 print(send_message(SYSTEM_PROMPT, user_input))
             except Exception as e:
                 print(f"Error: {e}")
+
     # Ctrl+C o Ctrl+D: sale del chat de forma ordenada.
     except (KeyboardInterrupt, EOFError):
         print("\nSaliendo del chat...")
+
     # Cualquier otro error inesperado se muestra en pantalla.
     except Exception as e:
         print(f"Error: {e}")
