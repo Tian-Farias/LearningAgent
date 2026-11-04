@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LearningAgent</title>
+<meta name="description" content="Cómo un programa que llama a una API se convierte en un agente, versión por versión y línea por línea.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=Martian+Mono:wght@500;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>LearningAgent</h1>
+    <p>De una llamada a una API hasta un agente, versión por versión.</p>
+  </div>
+  <div class="top-actions">
+    <a id="repo-link" class="quiet-btn" hidden>Ver en GitHub</a>
+    <button id="theme-btn" class="quiet-btn" type="button">Cambiar tema</button>
+  </div>
+</header>
+
+<section class="map" aria-label="Mapa de evolución del agente">
+  <div class="map-scroll" id="map-scroll">
+    <div class="map-grid" id="map"></div>
+  </div>
+</section>
+
+<main class="stage">
+  <aside class="story" id="story" aria-live="polite"></aside>
+  <section class="viewer" aria-label="Contenido del paso actual">
+    <div class="vhead" id="vhead"></div>
+    <div class="vbody">
+      <div class="code" id="code" tabindex="0" aria-label="Código del archivo"></div>
+      <div class="mini" id="mini" aria-hidden="true"></div>
+      <div class="plan" id="plan" hidden></div>
+    </div>
+  </section>
+</main>
+
+<footer class="transport">
+  <div class="t-buttons">
+    <button id="first-btn" class="icon-btn" type="button" aria-label="Volver al inicio" title="Volver al inicio">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3zM14 2v12L6 8z"/></svg>
+    </button>
+    <button id="prev-btn" class="icon-btn" type="button" aria-label="Paso anterior" title="Paso anterior (←)">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2v12L3 8z"/></svg>
+    </button>
+    <button id="play-btn" class="play-btn" type="button">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path id="play-icon" d="M4 2v12l10-6z"/></svg>
+      <span id="play-label">Reproducir</span>
+    </button>
+    <button id="next-btn" class="icon-btn" type="button" aria-label="Paso siguiente" title="Paso siguiente (→)">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2v12l8-6z"/></svg>
+    </button>
+  </div>
+  <p class="t-pos" id="position"></p>
+  <div class="t-options">
+    <label class="check" for="show-deleted">
+      <input type="checkbox" id="show-deleted">
+      Mostrar líneas eliminadas
+    </label>
+    <div class="speed" role="group" aria-label="Velocidad">
+      <button type="button" data-speed="1" aria-pressed="true">1x</button>
+      <button type="button" data-speed="2" aria-pressed="false">2x</button>
+    </div>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
