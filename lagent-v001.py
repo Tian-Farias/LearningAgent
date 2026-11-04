@@ -71,7 +71,7 @@ def send_message(system_prompt, messages):
         # siempre primero y no se guarda en el historial.
         messages=[
             {
-                "role": "system", 
+                "role": "system",
                 "content": system_prompt
             }
             ] + messages,
@@ -152,7 +152,7 @@ def main():
             # Primero se agrega a la memoria, para que el modelo lo reciba junto con todo lo anterior.
             messages.append(
                 {
-                    "role": "user", 
+                    "role": "user",
                     "content": user_input
                 }
             )
@@ -185,7 +185,7 @@ def main():
             # Solo las respuestas reales (no vacías) del modelo entran a la memoria.
             messages.append(
                 {
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": reply
                 }
             )
