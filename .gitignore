@@ -21,3 +21,7 @@ env/
 
 # Claude Code
 .claude/
+
+# Sesiones del agente
+memory/*
+!memory/.fakeignore
