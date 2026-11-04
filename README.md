@@ -17,6 +17,7 @@ Cada versión es un archivo independiente (`lagent-vXXX.py`) que agrega una capa
 | Versión | Archivo | Qué agrega |
 |---------|---------|------------|
 | v000 | [lagent-v000.py](lagent-v000.py) | El sistema conversacional más simple posible con `litellm`. Cada mensaje es independiente: sin memoria ni contexto. Incluye comandos básicos para controlar el chat. |
+| v001 | [lagent-v001.py](lagent-v001.py) | Agrega memoria: guarda el historial de mensajes en una variable y en un archivo, para que el modelo recuerde la conversación y esta sobreviva entre sesiones. |
 
 > Esta tabla crece a medida que el agente evoluciona.
 
@@ -39,12 +40,26 @@ python lagent-v000.py
 
 Escribe un mensaje después del prompt `>>>` y presiona Enter para enviarlo al modelo. Si solo presionas Enter, no se envía nada.
 
+### Sesiones y memoria (v001)
+
+Desde v001 el chat recuerda la conversación. Cada sesión se guarda en `memory/<nombre>.json` y se carga al arrancar:
+
+```bash
+python lagent-v001.py            # sesión "default"
+python lagent-v001.py trabajo    # sesión "trabajo"
+```
+
+Al abrir una sesión existente, el modelo retoma la conversación donde quedó.
+
+> **Limitación: este sistema de memoria es ineficiente.** El historial completo se envía al modelo en cada mensaje, y solo se vacía de forma manual con `/clear`. Con el tiempo la memoria crece sin límite, así que cada mensaje lleva más contexto que el anterior. Como las APIs cobran por los tokens que se envían, el costo de cada respuesta aumenta a medida que la sesión se alarga, y eventualmente se puede superar el límite de contexto del modelo. Que la limpieza dependa del usuario hace que, en la práctica, casi nunca se haga. Las siguientes versiones tendrán que resolver esto.
+
 ### Comandos
 
 Los comandos empiezan con `/` y no se envían al modelo. No distinguen mayúsculas de minúsculas.
 
 | Comando | Qué hace |
 |---------|----------|
+| `/clear` | Borra la memoria de la sesión actual (v001 en adelante). |
 | `/help` | Muestra los comandos disponibles. |
 | `/exit` o `/quit` | Sale del chat. |
 
