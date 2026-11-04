@@ -59,6 +59,7 @@ def save_memory(path, messages):
 
 # Función para enviar la conversación al modelo de lenguaje y obtener una respuesta.
 # Recibe el prompt de sistema (instrucciones para el modelo) y el historial de mensajes.
+# Devuelve el texto de la respuesta y el uso de tokens (que puede ser None).
 # Si algo falla (red, clave inválida, etc.) lanza la excepción: quien la llama decide
 # qué hacer, así un error nunca se confunde con una respuesta del modelo.
 def send_message(system_prompt, messages):
@@ -77,15 +78,10 @@ def send_message(system_prompt, messages):
         api_key=API_KEY,
         api_base=BASE_URL,
     )
-    # Mostramos los tokens enviados, que crecen con el historial y es lo que se cobra.
-    # "usage" puede venir vacío según el proveedor o el proxy. Por eso se lee con getattr
-    # y se muestra solo si existe: si faltara, un error acá descartaría una respuesta que
-    # el modelo ya generó (y que ya se cobró) solo por no poder mostrar el contador.
+    # "usage" informa los tokens enviados y puede venir vacío según el proveedor o el proxy.
     usage = getattr(response, "usage", None)
-    if usage is not None:
-        print(f"[tokens enviados: {usage.prompt_tokens}]")
     # La respuesta trae una lista de opciones ("choices"); se toma el texto de la primera.
-    return response.choices[0].message.content # type: ignore
+    return response.choices[0].message.content, usage  # type: ignore
 
 # Sistema de comandos basicos para controlar el chat.
 # Recibe el historial para poder modificarlo (por ejemplo, /clear lo vacía).
@@ -161,13 +157,21 @@ def main():
                 }
             )
             try:
-                reply = send_message(SYSTEM_PROMPT, messages)
+                reply, usage = send_message(SYSTEM_PROMPT, messages)
             except Exception as e:
                 # El error se muestra en pantalla pero no entra a la memoria: se quita
                 # también el mensaje del usuario para poder reintentar sin duplicarlo.
                 messages.pop()
                 print(f"Error: {e}")
                 continue
+
+            # Mostramos los tokens enviados, que crecen con el historial y es lo que se cobra.
+            # Va fuera del try anterior a propósito: ese except descarta la respuesta, y un
+            # contador incompleto no debe tirar una respuesta que el modelo ya generó (y que
+            # ya se cobró). Por eso se lee con getattr y se muestra solo si existe.
+            prompt_tokens = getattr(usage, "prompt_tokens", None)
+            if prompt_tokens is not None:
+                print(f"[tokens enviados: {prompt_tokens}]")
 
             # Una respuesta vacía no se guarda: un mensaje vacío en el historial se
             # reenviaría en cada pregunta siguiente y la API podría rechazarlo, dejando
