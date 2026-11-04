@@ -17,7 +17,7 @@ Cada versión es un archivo independiente (`lagent-vXXX.py`) que agrega una capa
 | Versión | Archivo | Qué agrega |
 |---------|---------|------------|
 | v000 | [lagent-v000.py](lagent-v000.py) | El sistema conversacional más simple posible con `litellm`. Cada mensaje es independiente: sin memoria ni contexto. Incluye comandos básicos para controlar el chat. |
-| v001 | [lagent-v001.py](lagent-v001.py) | Agrega memoria: guarda el historial de mensajes en una variable y en un archivo, para que el modelo recuerde la conversación y esta sobreviva entre sesiones. |
+| v001 | [lagent-v001.py](lagent-v001.py) | Agrega memoria: guarda el historial de mensajes en una variable y en un archivo, para que el modelo recuerde la conversación y esta sobreviva entre sesiones. Muestra los tokens enviados en cada mensaje para ver cómo crece el costo. |
 
 > Esta tabla crece a medida que el agente evoluciona.
 
@@ -49,11 +49,17 @@ python lagent-v001.py            # sesión "default"
 python lagent-v001.py trabajo    # sesión "trabajo"
 ```
 
+Al abrir una sesión existente, el modelo retoma la conversación donde quedó.
+
 El nombre de la sesión solo puede tener letras, números, `-` y `_`. Cualquier otro nombre (por ejemplo `../x` o uno vacío) se rechaza, para que nunca se escriba fuera de `memory/`. Los archivos de sesión están en el `.gitignore`.
 
 Antes de cada respuesta se muestra entre corchetes la cantidad de tokens enviados (`[tokens enviados: 1234]`), si el proveedor la informa. Sirve para ver cómo crece el costo a medida que el historial se alarga.
 
-Al abrir una sesión existente, el modelo retoma la conversación donde quedó.
+Casos especiales:
+
+- Si el modelo devuelve una respuesta vacía, no se guarda en la memoria (un mensaje vacío en el historial podría hacer que la API rechace todos los mensajes siguientes). Se avisa y se puede reintentar.
+- Si la llamada al modelo falla, el error se muestra pero no entra a la memoria, y el mensaje del usuario se descarta para poder reintentar sin duplicarlo.
+- Si falla el guardado en disco, el chat sigue funcionando con la memoria en RAM y solo se avisa.
 
 > **Limitación: este sistema de memoria es ineficiente.** El historial completo se envía al modelo en cada mensaje, y solo se vacía de forma manual con `/clear`. Con el tiempo la memoria crece sin límite, así que cada mensaje lleva más contexto que el anterior. Como las APIs cobran por los tokens que se envían, el costo de cada respuesta aumenta a medida que la sesión se alarga, y eventualmente se puede superar el límite de contexto del modelo. Que la limpieza dependa del usuario hace que, en la práctica, casi nunca se haga. Las siguientes versiones tendrán que resolver esto.
 
