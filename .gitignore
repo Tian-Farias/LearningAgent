@@ -26,6 +26,9 @@ env/
 # Sesiones del agente
 **/memory/*
 !**/memory/.fakeignore
+**/mem_session/*
+!**/mem_session/.fakeignore
 
 # Notas de desarrollo
 NOTAS.md
+PROMPT_DOC.md

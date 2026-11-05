@@ -24,12 +24,12 @@ Resuelve: el historial crece sin límite (la limitación que ya plantea el READM
 
 Resuelve: la ventana pierde contexto importante.
 
-- [ ] Cuando los tokens superen un umbral, resumir los mensajes viejos con el modelo y reemplazarlos por el resumen
-- [ ] Resumen con secciones fijas (hechos, decisiones, pendientes), para que no se degrade resumen tras resumen
-- [ ] Guardar el resumen en la sesión junto con los mensajes recientes
-- [ ] Comando `/memoria` para ver qué recuerda el agente en ese momento
-- [ ] Mostrar cuándo se compacta y cuántos tokens libera
-- [ ] README: comparar v001, v002 y v003 con la misma conversación
+- [x] Cuando los tokens superen un umbral, resumir los mensajes viejos con el modelo y reemplazarlos por el resumen
+- [x] Resumen con secciones fijas (hechos, decisiones, pendientes), para que no se degrade resumen tras resumen
+- [x] Guardar el resumen en la sesión junto con los mensajes recientes
+- [x] Comando `/memoria` para ver qué recuerda el agente en ese momento
+- [x] Mostrar cuándo se compacta y cuántos tokens libera
+- [x] README: comparar v001, v002 y v003 con la misma conversación
 
 ## Arco 2: de chat a agente
 

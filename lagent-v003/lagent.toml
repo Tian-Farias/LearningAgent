@@ -1,0 +1,20 @@
+model = "anthropic/claude-haiku-5-5"
+system_prompt = "Eres un asistente útil."
+
+[memory]
+dir = "mem_session"              # carpeta de las sesiones
+compact_at_tokens = 8000    # v003: sobre este umbral se resume lo viejo
+keep_recent_turns = 3       # v003: turnos recientes que se conservan, si caben
+
+# [agent]                     # v004-v005
+# max_steps = 20
+# allowed_tools = ["read_file", "current_time"]
+# workdir = "workspace"
+
+# [traces]                    # v007
+#dir = "traces"
+
+# [models]                    # v009: modelo por rol
+# planner = "anthropic/claude-opus-5-5"
+# worker = "anthropic/claude-haiku-5-5"
+# reviewer = "openai/gpt-..."

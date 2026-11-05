@@ -9,8 +9,8 @@ Cada versión es una carpeta independiente (`lagent-vXXX/`) que agrega una capac
 ## Cómo está organizado
 
 - Una carpeta por versión: `lagent-v000/`, `lagent-v001/`, etc.
-- Dentro de cada carpeta, un archivo por funcionalidad: `main.py` (el bucle del chat), `config.py` (configuración), `llm.py` (llamada al modelo), `commands.py` (comandos) y `memory.py` (historial, desde v001).
-- Desde v001, las sesiones de cada versión se guardan en su propia carpeta `memory/`.
+- Dentro de cada carpeta, un archivo por funcionalidad: `main.py` (el bucle del chat), `config.py` (configuración), `llm.py` (llamada al modelo), `commands.py` (comandos), `memory.py` (historial, desde v001) y `compaction.py` (resumen de lo viejo, desde v003).
+- Desde v001, las sesiones de cada versión se guardan en su propia carpeta: `memory/` en v001 y `mem_session/` desde v002.
 - Desde v002, cada versión lleva su propio archivo de configuración, `lagent.toml`.
 - El `main.py` de cada versión empieza con un comentario que explica qué hace.
 - Cada versión se puede ejecutar sola, desde cualquier carpeta.
@@ -22,17 +22,18 @@ Cada versión es una carpeta independiente (`lagent-vXXX/`) que agrega una capac
 | v000 | [lagent-v000/](lagent-v000/) | El sistema conversacional más simple posible con `litellm`. Cada mensaje es independiente: sin memoria ni contexto. Incluye comandos básicos para controlar el chat. |
 | v001 | [lagent-v001/](lagent-v001/) | Agrega memoria: guarda el historial de mensajes en una variable y en un archivo, para que el modelo recuerde la conversación y esta sobreviva entre sesiones. Muestra los tokens enviados en cada mensaje para ver cómo crece el costo. |
 | v002 | [lagent-v002/](lagent-v002/) | Agrega la ventana de memoria: guarda en disco el historial completo, pero envía al modelo solo los últimos mensajes. Lee la configuración de `lagent.toml`. |
+| v003 | [lagent-v003/](lagent-v003/) | Agrega la compactación: cuando la conversación supera un umbral de tokens, resume los mensajes viejos con el modelo y los reemplaza por el resumen. Agrega el comando `/memoria`. |
 
 > Esta tabla crece a medida que el agente evoluciona.
 
 ## Requisitos
 
-- Python 3.11 o superior (`lagent-v002/` usa `tomllib`)
+- Python 3.11 o superior (desde `lagent-v002/` se usa `tomllib`)
 - [litellm](https://github.com/BerriAI/litellm): `pip install litellm`
 - Variables de entorno:
   - `API_KEY`: clave de la API del proveedor.
   - `BASE_URL`: URL base del modelo.
-  - `MODEL` (opcional): modelo a usar, con el formato `proveedor/modelo`. En v000 y v001 el valor por defecto es `anthropic/claude-haiku-5-5`; en v002 tiene prioridad sobre `lagent.toml`.
+  - `MODEL` (opcional): modelo a usar, con el formato `proveedor/modelo`. En v000 y v001 el valor por defecto es `anthropic/claude-haiku-5-5`; desde v002 tiene prioridad sobre `lagent.toml`.
 
 ## Uso
 
@@ -78,8 +79,8 @@ model = "anthropic/claude-haiku-5-5"
 system_prompt = "Eres un asistente útil."
 
 [memory]
-dir = "memory"
-window = 20
+dir = "mem_session"
+window = 8
 ```
 
 | Clave | Qué define |
@@ -108,12 +109,88 @@ Antes de cada respuesta se muestra cuánto se envió del historial y, si el prov
 Para comparar con v001 en la misma conversación, copia la sesión a v002, porque usan el mismo formato:
 
 ```bash
-cp lagent-v001/memory/trabajo.json lagent-v002/memory/trabajo.json
+mkdir -p lagent-v002/mem_session
+cp lagent-v001/memory/trabajo.json lagent-v002/mem_session/trabajo.json
 ```
 
 Después ejecuta `python main.py trabajo` en la carpeta de cada versión y envía el mismo mensaje en ambas. La diferencia de tokens muestra lo que ahorra la ventana.
 
 > **Limitación: el modelo olvida de golpe.** Lo que queda fuera de la ventana desaparece por completo para el modelo, aunque siga en el archivo. Un dato importante dicho al principio, como un nombre o una decisión, se olvida sin aviso cuando sale de la ventana, y el modelo puede contradecirlo o inventar otro. Además, la ventana cuenta mensajes y no tokens, así que unos pocos mensajes muy largos todavía pueden costar mucho o superar el límite de contexto. Las siguientes versiones tendrán que resolver esto.
+
+### Compactación (v003)
+
+v003 ya no olvida de golpe. Antes de enviar cada mensaje, si la conversación supera un umbral de tokens, le pide al modelo que resuma los mensajes viejos y los reemplaza por el resumen. Al modelo le llega todo lo que queda: el resumen en el prompt de sistema y luego los mensajes recientes. Por eso v003 ya no usa `window`: si la ventana siguiera, los mensajes saldrían de ella antes de llegar al umbral y se perderían sin resumirse.
+
+El disparo se mide en tokens porque el costo y el límite de contexto se miden en tokens: 20 mensajes cortos no justifican compactar, y 3 muy largos sí. El corte se hace por turnos porque debe caer en un límite limpio de la conversación. Un turno es un mensaje `user` y lo que le sigue hasta el próximo `user`.
+
+```toml
+[memory]
+dir = "mem_session"
+compact_at_tokens = 8000
+keep_recent_turns = 3
+```
+
+| Clave | Qué define |
+|-------|------------|
+| `memory.compact_at_tokens` | Umbral de tokens sobre el que se compacta. Debe ser un entero mayor que 0. |
+| `memory.keep_recent_turns` | Cantidad máxima de turnos recientes que se conservan sin resumir, incluido el mensaje actual. Debe ser un entero mayor que 0. |
+
+La compactación busca dejar la conversación bajo la mitad del umbral, para no repetirse en el mensaje siguiente. Con `compact_at_tokens = 8000`, el resumen tiene un tope de 2000 tokens y los turnos recientes, otros 2000. Si los turnos no caben, se conservan menos. Así, unos turnos largos no pueden impedir que se compacte, pero con un umbral muy bajo un mensaje normal podría no caber: conviene que sea holgado, al menos de unos miles de tokens.
+
+El archivo de la sesión guarda el resumen junto con los mensajes recientes (`{"summary": ..., "messages": [...]}`). v003 también puede abrir las sesiones de v001 y v002, y las convierte a este formato.
+
+El resumen tiene tres secciones fijas: `## Hechos`, `## Decisiones` y `## Pendientes`. En cada compactación, el modelo recibe el resumen anterior y lo actualiza con los mensajes nuevos, en vez de resumir un resumen. Así se reduce el riesgo de que se degrade con cada pasada.
+
+Cuando se compacta, se avisa cuántos tokens libera, según una estimación local que puede diferir un poco de lo que cobra el proveedor:
+
+```text
+[compactación: 100 mensajes resumidos, 8040 -> 456 tokens estimados, 7584 liberados]
+```
+
+El comando `/memoria` muestra lo que el agente recuerda en ese momento: el resumen completo y los mensajes recientes, cada uno recortado a 200 caracteres.
+
+Casos especiales:
+
+- Si el modelo falla al resumir, o el resumen se corta en el tope o no trae las tres secciones, se avisa y el historial queda intacto. Se vuelve a intentar con el próximo mensaje.
+- Si el resumen no libera tokens, se descarta.
+- Si el mensaje actual no cabe en el espacio de los turnos recientes, por ejemplo un log pegado, se avisa y se envía sin compactar. Se compacta con el mensaje siguiente.
+- El archivo de la sesión se guarda solo con el intercambio completo. Si interrumpes con `Ctrl+C` o falla el envío, queda como estaba tras el último intercambio.
+
+#### Comparación de v001, v002 y v003
+
+Esta es la misma conversación de 80 mensajes de la persona, con `window = 8` en v002, y `compact_at_tokens = 8000` y `keep_recent_turns = 3` en v003. El dato "Mi proyecto se llama Aurora" va en el primer mensaje.
+
+| Mensaje | v001 | v002 | v003 |
+|---------|------|------|------|
+| 1 | 84 | 84 | 84 |
+| 20 | 2991 | 537 | 2991 |
+| 40 | 6051 | 537 | 6051 |
+| 60 | 9111 | 537 | 1527 |
+| 80 | 12171 | 537 | 4587 |
+| **Tokens totales enviados** | 490200 | 42066 | 285630 |
+| **¿Sigue enviando el dato en el mensaje 80?** | Sí | No, lo pierde desde el mensaje 5 | Sí, en el resumen |
+
+Son tokens estimados con el contador local de `litellm`. **Las respuestas y el resumen son simulados, sin llamadas a la API.** La tabla sirve para ver la forma de cada curva, no el costo real, y el dato sigue en v003 porque el resumen simulado lo incluye: un modelo real podría omitirlo. El total de v003 incluye 7782 tokens de su única compactación.
+
+v002 es la más barata, pero olvida. v001 lo recuerda todo, pero su costo crece sin límite. v003 conserva lo importante con un costo acotado, aunque hasta llegar al umbral cuesta lo mismo que v001.
+
+Para repetir la comparación con un modelo real, copia una misma sesión a las carpetas de cada versión y envía el mismo mensaje en las tres. v003 compacta antes de enviarlo si la sesión supera el umbral.
+
+#### Un mensaje enorme: por qué contar tokens y no mensajes
+
+La ventana de v002 es ciega al tamaño. En esta conversación de 30 mensajes, simulada igual que la anterior, el mensaje 20 es un log pegado:
+
+| Mensaje | v002: tokens (mensajes) | v003: tokens (mensajes) |
+|---------|-------------------------|-------------------------|
+| 19 | 537 (7) | 2832 (37) |
+| 20 | 6892 (7) | 9340 (39) |
+| 21 | 6892 (7) | 143 (1) |
+| 23 | 6892 (7) | 449 (5) |
+| 24 | 537 (7) | 602 (7) |
+
+v002 sigue enviando siempre 7 mensajes, pero durante cuatro mensajes cuesta 13 veces más, y aun así olvida lo anterior. v003 avisa en el mensaje 20 y lo compacta en el 21. El costo de esa rapidez es que el log solo queda en el resumen: si la persona pregunta por una línea concreta en el mensaje 21, el modelo ya no la tiene.
+
+> **Limitación: el resumen reemplaza, y sigue sin haber acción.** Los mensajes resumidos ya no se pueden recuperar, ni siquiera del archivo, y si el modelo omite algo al resumir, ese dato se pierde sin aviso. Un mensaje muy largo se resume en cuanto llega el siguiente, aunque la conversación siga hablando de él. Cada compactación es además una llamada más al modelo, y un resumen rechazado se paga y se vuelve a intentar con el próximo mensaje. Con esto la memoria queda mejor resuelta, pero el agente todavía solo conversa: no puede hacer nada. Las siguientes versiones tendrán que resolver esto.
 
 ### Comandos
 
@@ -122,6 +199,7 @@ Los comandos empiezan con `/` y no se envían al modelo. No distinguen mayúscul
 | Comando | Qué hace |
 |---------|----------|
 | `/clear` | Borra la memoria de la sesión actual (v001 en adelante). |
+| `/memoria` | Muestra el resumen y los mensajes recientes (v003 en adelante). |
 | `/help` | Muestra los comandos disponibles. |
 | `/exit` o `/quit` | Sale del chat. |
 
