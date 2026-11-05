@@ -4,7 +4,7 @@ Hoja de ruta para las próximas versiones de `lagent`. Cada versión agrega una 
 
 ## v001: pendientes de cierre
 
-- [x] ~~Quitar los espacios al final de línea en `"role": "system", `, `"role": "user", ` y `"role": "assistant", ` (`ruff check --select W291 --fix lagent-v001.py`)~~
+- [x] Quitar los espacios al final de línea en `"role": "system", `, `"role": "user", ` y `"role": "assistant", ` (`ruff check --select W291 --fix lagent-v001.py`)
 
 ## Arco 1: memoria
 
@@ -12,11 +12,13 @@ Hoja de ruta para las próximas versiones de `lagent`. Cada versión agrega una 
 
 Resuelve: el historial crece sin límite (la limitación que ya plantea el README).
 
-- [ ] Enviar al modelo solo los últimos N mensajes, configurable con una variable de entorno
-- [ ] Cortar siempre en un mensaje `user`, para que el historial enviado no empiece con `assistant`
-- [ ] Guardar en disco el historial completo y enviar solo la ventana (memoria guardada y memoria enviada son cosas distintas)
-- [ ] Mostrar los tokens enviados para comparar con v001 en la misma conversación
-- [ ] README: explicar la limitación que deja, el modelo olvida de golpe lo que queda fuera de la ventana
+- [x] Archivo Toml de configuracion para parametros de comportamiento.
+- [x] Decidir la estructura del repo: seguir con un archivo por versión o pasar a carpetas (`v004/agent.py`, `v004/tools.py`)
+- [x] Enviar al modelo solo los últimos N mensajes, configurable en el archivo toml (window)
+- [x] Cortar siempre en un mensaje `user`, para que el historial enviado no empiece con `assistant`
+- [x] Guardar en disco el historial completo y enviar solo la ventana (memoria guardada y memoria enviada son cosas distintas)
+- [x] Mostrar los tokens enviados para comparar con v001 en la misma conversación
+- [x] README: explicar la limitación que deja, el modelo olvida de golpe lo que queda fuera de la ventana
 
 ### v003: compactación
 
@@ -39,7 +41,6 @@ Resuelve: el sistema solo conversa, no puede hacer nada.
 - [ ] Loop: si el modelo pide una tool, se ejecuta, se devuelve el resultado y se vuelve a llamar al modelo hasta que responda con texto
 - [ ] Guardar en memoria los mensajes de tool call y de tool result, respetando el pareo entre ambos
 - [ ] `send_message` devuelve la respuesta completa del modelo, ya no solo el texto (las respuestas con tool calls pueden traer contenido vacío)
-- [ ] Decidir la estructura del repo: seguir con un archivo por versión o pasar a carpetas (`v004/agent.py`, `v004/tools.py`)
 
 ### v005: guardrails
 

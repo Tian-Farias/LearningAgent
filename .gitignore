@@ -18,10 +18,11 @@ env/
 .vscode/
 .idea/
 .DS_Store
+.ruff_cache/
 
 # Claude Code
 .claude/
 
 # Sesiones del agente
-memory/*
-!memory/.fakeignore
+**/memory/*
+!**/memory/.fakeignore

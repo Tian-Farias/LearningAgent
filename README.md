@@ -4,49 +4,55 @@ Este repositorio cuenta la historia de un agente: desde la idea más simple hast
 
 El nombre sigue la misma filosofía de sencillez: `lagent` viene de *learning agent*.
 
-Cada versión es un archivo independiente (`lagent-vXXX.py`) que agrega una capacidad nueva sobre la anterior. Así se puede leer, ejecutar y comparar cada etapa por separado y ver qué cambia y por qué.
+Cada versión es una carpeta independiente (`lagent-vXXX/`) que agrega una capacidad nueva sobre la anterior. Así se puede leer, ejecutar y comparar cada etapa por separado y ver qué cambia y por qué.
 
 ## Cómo está organizado
 
-- Un archivo por versión: `lagent-v000.py`, `lagent-v001.py`, etc.
-- Cada archivo empieza con un comentario que explica qué hace y qué le falta.
-- Cada versión se puede ejecutar sola.
+- Una carpeta por versión: `lagent-v000/`, `lagent-v001/`, etc.
+- Dentro de cada carpeta, un archivo por funcionalidad: `main.py` (el bucle del chat), `config.py` (configuración), `llm.py` (llamada al modelo), `commands.py` (comandos) y `memory.py` (historial, desde v001).
+- Desde v001, las sesiones de cada versión se guardan en su propia carpeta `memory/`.
+- Desde v002, cada versión lleva su propio archivo de configuración, `lagent.toml`.
+- El `main.py` de cada versión empieza con un comentario que explica qué hace.
+- Cada versión se puede ejecutar sola, desde cualquier carpeta.
 
 ## Versiones
 
-| Versión | Archivo | Qué agrega |
+| Versión | Carpeta | Qué agrega |
 |---------|---------|------------|
-| v000 | [lagent-v000.py](lagent-v000.py) | El sistema conversacional más simple posible con `litellm`. Cada mensaje es independiente: sin memoria ni contexto. Incluye comandos básicos para controlar el chat. |
-| v001 | [lagent-v001.py](lagent-v001.py) | Agrega memoria: guarda el historial de mensajes en una variable y en un archivo, para que el modelo recuerde la conversación y esta sobreviva entre sesiones. Muestra los tokens enviados en cada mensaje para ver cómo crece el costo. |
+| v000 | [lagent-v000/](lagent-v000/) | El sistema conversacional más simple posible con `litellm`. Cada mensaje es independiente: sin memoria ni contexto. Incluye comandos básicos para controlar el chat. |
+| v001 | [lagent-v001/](lagent-v001/) | Agrega memoria: guarda el historial de mensajes en una variable y en un archivo, para que el modelo recuerde la conversación y esta sobreviva entre sesiones. Muestra los tokens enviados en cada mensaje para ver cómo crece el costo. |
+| v002 | [lagent-v002/](lagent-v002/) | Agrega la ventana de memoria: guarda en disco el historial completo, pero envía al modelo solo los últimos mensajes. Lee la configuración de `lagent.toml`. |
 
 > Esta tabla crece a medida que el agente evoluciona.
 
 ## Requisitos
 
-- Python 3
+- Python 3.11 o superior (`lagent-v002/` usa `tomllib`)
 - [litellm](https://github.com/BerriAI/litellm): `pip install litellm`
 - Variables de entorno:
   - `API_KEY`: clave de la API del proveedor.
   - `BASE_URL`: URL base del modelo.
-  - `MODEL` (opcional): modelo a usar, con el formato `proveedor/modelo`. Por defecto `anthropic/claude-haiku-5-5`.
+  - `MODEL` (opcional): modelo a usar, con el formato `proveedor/modelo`. En v000 y v001 el valor por defecto es `anthropic/claude-haiku-5-5`; en v002 tiene prioridad sobre `lagent.toml`.
 
 ## Uso
 
 ```bash
 export API_KEY="tu-clave"
 export BASE_URL="https://tu-endpoint"
-python lagent-v000.py
+cd lagent-v000
+python main.py
 ```
 
 Escribe un mensaje después del prompt `>>>` y presiona Enter para enviarlo al modelo. Si solo presionas Enter, no se envía nada.
 
 ### Sesiones y memoria (v001)
 
-Desde v001 el chat recuerda la conversación. Cada sesión se guarda en `memory/<nombre>.json` y se carga al arrancar:
+Desde v001 el chat recuerda la conversación. Cada sesión se guarda en `memory/<nombre>.json`, dentro de la carpeta de la versión, y se carga al arrancar:
 
 ```bash
-python lagent-v001.py            # sesión "default"
-python lagent-v001.py trabajo    # sesión "trabajo"
+cd lagent-v001
+python main.py            # sesión "default"
+python main.py trabajo    # sesión "trabajo"
 ```
 
 Al abrir una sesión existente, el modelo retoma la conversación donde quedó.
@@ -62,6 +68,52 @@ Casos especiales:
 - Si falla el guardado en disco, el chat sigue funcionando con la memoria en RAM y solo se avisa.
 
 > **Limitación: este sistema de memoria es ineficiente.** El historial completo se envía al modelo en cada mensaje, y solo se vacía de forma manual con `/clear`. Con el tiempo la memoria crece sin límite, así que cada mensaje lleva más contexto que el anterior. Como las APIs cobran por los tokens que se envían, el costo de cada respuesta aumenta a medida que la sesión se alarga, y eventualmente se puede superar el límite de contexto del modelo. Que la limpieza dependa del usuario hace que, en la práctica, casi nunca se haga. Las siguientes versiones tendrán que resolver esto.
+
+### Configuración (v002)
+
+Desde v002, el comportamiento del agente se define en un `lagent.toml` junto a su código, y cada versión tiene el suyo:
+
+```toml
+model = "anthropic/claude-haiku-5-5"
+system_prompt = "Eres un asistente útil."
+
+[memory]
+dir = "memory"
+window = 20
+```
+
+| Clave | Qué define |
+|-------|------------|
+| `model` | Modelo a usar, con el formato `proveedor/modelo`. La variable de entorno `MODEL` tiene prioridad sobre este valor. |
+| `system_prompt` | Instrucciones generales para el modelo. |
+| `memory.dir` | Carpeta de las sesiones, relativa a la carpeta de la versión. También acepta una ruta absoluta. |
+| `memory.window` | Cantidad máxima de mensajes que se envían al modelo. Debe ser un entero mayor que 0. |
+
+Las claves comentadas en el archivo corresponden a versiones futuras. `API_KEY` y `BASE_URL` siguen en variables de entorno, para que el archivo se pueda versionar sin datos sensibles.
+
+El código no tiene valores por defecto. Si el archivo no existe, tiene un error de sintaxis, o le falta una clave o alguna tiene un valor no válido, el agente muestra el error y termina al arrancar. `model`, `system_prompt` y `memory.dir` deben ser textos no vacíos. `model` puede faltar si está definida la variable `MODEL`.
+
+### Ventana de memoria (v002)
+
+v002 separa la memoria guardada de la memoria enviada: el archivo de la sesión conserva el historial completo, pero al modelo solo le llegan los últimos mensajes, como máximo `memory.window`. Así, lo que se envía deja de crecer a medida que la sesión se alarga.
+
+La ventana siempre empieza en un mensaje `user`, para que el modelo no reciba una respuesta sin su pregunta. Si el corte cae en una respuesta, esa también queda fuera, así que a veces se envía un mensaje menos que `window`: en un chat normal, con `window = 20` se envían 19.
+
+Antes de cada respuesta se muestra cuánto se envió del historial y, si el proveedor la informa, la cantidad de tokens:
+
+```text
+[mensajes enviados: 19 de 45, tokens enviados: 1234]
+```
+
+Para comparar con v001 en la misma conversación, copia la sesión a v002, porque usan el mismo formato:
+
+```bash
+cp lagent-v001/memory/trabajo.json lagent-v002/memory/trabajo.json
+```
+
+Después ejecuta `python main.py trabajo` en la carpeta de cada versión y envía el mismo mensaje en ambas. La diferencia de tokens muestra lo que ahorra la ventana.
+
+> **Limitación: el modelo olvida de golpe.** Lo que queda fuera de la ventana desaparece por completo para el modelo, aunque siga en el archivo. Un dato importante dicho al principio, como un nombre o una decisión, se olvida sin aviso cuando sale de la ventana, y el modelo puede contradecirlo o inventar otro. Además, la ventana cuenta mensajes y no tokens, así que unos pocos mensajes muy largos todavía pueden costar mucho o superar el límite de contexto. Las siguientes versiones tendrán que resolver esto.
 
 ### Comandos
 

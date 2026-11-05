@@ -3,116 +3,29 @@
 # A diferencia de v000, guarda el historial de mensajes en una variable y en un
 # archivo, así el modelo recuerda lo anterior y la conversación sobrevive entre sesiones.
 #
-# Uso: python lagent-v001.py [nombre_de_sesion]
-# Cada sesión se guarda en memory/<nombre_de_sesion>.json (por defecto "default").
+# El agente está separado en un archivo por funcionalidad:
+#   main.py: el bucle del chat.
+#   config.py: modelo, instrucciones y carpeta de sesiones.
+#   memory.py: carga y guarda el historial.
+#   llm.py: envía la conversación al modelo.
+#   commands.py: comandos del chat.
+#
+# Uso: python main.py [nombre_de_sesion], indicando la ruta si se ejecuta desde otra carpeta.
+# Cada sesión se guarda en memory/<nombre_de_sesion>.json (por defecto "default"),
+# dentro de la carpeta de esta versión.
 # El nombre solo puede tener letras, números, "-" y "_", para que nunca se pueda
 # escribir fuera de la carpeta memory/.
 # Antes de cada respuesta se muestra entre corchetes la cantidad de tokens enviados,
 # para ver cómo crece el costo a medida que el historial se alarga.
 
-import json
 import os
 import re
 import sys
-import litellm  # Se usa para interactuar con muchos modelos de lenguaje de manera sencilla.
 
-# Configuración: la clave de API y la URL base se leen de variables de entorno
-# para no dejar datos sensibles escritos en el código.
-API_KEY = os.environ.get("API_KEY")
-BASE_URL = os.environ.get("BASE_URL")
-
-#  Modelo a utilizar, con el formato "proveedor/modelo" que usa litellm.
-# Se puede cambiar con la variable de entorno MODEL sin tocar el código.
-MODEL = os.environ.get("MODEL", "anthropic/claude-haiku-5-5")
-
-# Instrucciones generales para el modelo.
-SYSTEM_PROMPT = "Eres un asistente útil."
-
-# Carpeta donde se guardan las sesiones, una por archivo.
-MEMORY_DIR = "memory"
-
-# Carga el historial de una sesión desde su archivo.
-# Si el archivo no existe (sesión nueva) o está dañado, empieza con un historial vacío.
-# Un JSON válido que no sea una lista de mensajes también se considera dañado.
-def load_memory(path):
-    if not os.path.exists(path):
-        return []
-    try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, list):
-            raise ValueError("el archivo no contiene una lista de mensajes")
-        return data
-    except (ValueError, OSError) as e:  # JSONDecodeError es un tipo de ValueError
-        print(f"No se pudo leer la sesión ({e}). Se empieza con memoria vacía.")
-        return []
-
-# Guarda el historial completo en el archivo de la sesión.
-# Se escribe primero a un archivo temporal y luego se reemplaza, para no dejar
-# el archivo a medias si el programa se corta mientras escribe.
-def save_memory(path, messages):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp_path = path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(messages, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, path)
-
-# Función para enviar la conversación al modelo de lenguaje y obtener una respuesta.
-# Recibe el prompt de sistema (instrucciones para el modelo) y el historial de mensajes.
-# Devuelve el texto de la respuesta y el uso de tokens (que puede ser None).
-# Si algo falla (red, clave inválida, etc.) lanza la excepción: quien la llama decide
-# qué hacer, así un error nunca se confunde con una respuesta del modelo.
-def send_message(system_prompt, messages):
-    response = litellm.completion(
-        model=MODEL,
-        # La conversación es una lista de mensajes, cada uno con un rol:
-        # "system" para las instrucciones, "user" para lo que escribe la persona
-        # y "assistant" para lo que respondió el modelo. El prompt de sistema va
-        # siempre primero y no se guarda en el historial.
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt
-            }
-            ] + messages,
-        api_key=API_KEY,
-        api_base=BASE_URL,
-    )
-    # "usage" informa los tokens enviados y puede venir vacío según el proveedor o el proxy.
-    usage = getattr(response, "usage", None)
-    # La respuesta trae una lista de opciones ("choices"); se toma el texto de la primera.
-    return response.choices[0].message.content, usage  # type: ignore
-
-# Sistema de comandos basicos para controlar el chat.
-# Recibe el historial para poder modificarlo (por ejemplo, /clear lo vacía).
-# Devuelve:
-#   - None: el texto no es un comando, hay que enviarlo al modelo.
-#   - True: era un comando de salida, hay que terminar el chat.
-#   - False: era un comando (o uno desconocido) ya atendido, el chat continúa.
-def handle_command(user_input, messages, memory_path):
-    command = user_input.lower()
-    if command in ["/exit", "/quit"]:
-        print("Saliendo del chat...")
-        return True
-    # Borra la memoria de la sesión, tanto la variable como el archivo.
-    elif command == "/clear":
-        messages.clear()
-        save_memory(memory_path, messages)
-        print("Memoria borrada.")
-        return False
-    # Muestra los comandos disponibles.
-    elif command == "/help":
-        print("Comandos disponibles:")
-        print("/exit o /quit: Salir del chat.")
-        print("/clear: Borrar la memoria de esta sesión.")
-        print("/help: Mostrar esta ayuda.")
-        return False
-    # Cualquier otra cosa que empiece con "/" es un comando mal escrito:
-    # no se manda al modelo.
-    elif command.startswith("/"):
-        print(f"Comando desconocido: {command}. Usa /help.")
-        return False
-    return None
+from commands import handle_command
+from config import MEMORY_DIR, SYSTEM_PROMPT
+from llm import send_message
+from memory import load_memory, save_memory
 
 # Función principal: bucle de chat en la terminal.
 # Lee lo que escribe el usuario, lo envía al modelo y muestra la respuesta.
