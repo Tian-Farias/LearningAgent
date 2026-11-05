@@ -26,3 +26,6 @@ env/
 # Sesiones del agente
 **/memory/*
 !**/memory/.fakeignore
+
+# Notas de desarrollo
+NOTAS.md
