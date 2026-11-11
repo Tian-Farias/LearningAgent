@@ -112,7 +112,6 @@ Resuelve: costo y sesgo de autoevaluación con un solo modelo.
 - [ ] Tabla de modelos por rol (planificador, trabajador, revisor, compactador)
 - [ ] Revisor de otra familia de modelos
 - [ ] Escalar al modelo grande cuando se repiten los fallos
-- [ ] Todo a través del gateway, con el rol registrado en las trazas
 
 ### v011: orquestador y sub-agentes
 
