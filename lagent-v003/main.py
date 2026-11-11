@@ -4,8 +4,8 @@
 # entre sesiones.
 # A diferencia de v002, ya no olvida de golpe: cuando la conversación supera un umbral de
 # tokens, resume los mensajes viejos con el modelo y los reemplaza por el resumen.
-# Limitación: los mensajes resumidos ya no se pueden recuperar, y cada compactación
-# es una llamada más al modelo.
+# Limitación: los mensajes resumidos ya no se pueden recuperar, el resumen condensa lo
+# más antiguo cuando no cabe, y cada compactación es al menos una llamada más al modelo.
 #
 # El agente está separado en un archivo por funcionalidad:
 #   main.py: el bucle del chat.
@@ -70,6 +70,11 @@ def main():
     summary_info = ", con resumen" if memory["summary"] else ""
     print(f"Sesión '{session}' ({len(messages)} mensajes en memoria{summary_info}). Usa /help para ver los comandos.")
 
+    # Estado de la compactación mientras el programa está abierto: los fallos seguidos y los
+    # tokens que se le sumaron al tope del resumen. No se guarda en la sesión, así que cada
+    # ejecución parte con el tope normal.
+    compaction_state = {"failures": 0, "extra_tokens": 0}
+
     try:
         # Se repite hasta que el usuario salga con /exit, /quit, Ctrl+C o Ctrl+D.
         while True:
@@ -99,7 +104,7 @@ def main():
 
             # Se compacta antes de enviar: si se esperara a la respuesta, una conversación que
             # ya supera el límite del modelo fallaría al enviarse y nunca llegaría a compactarse.
-            compact_if_needed(model, system_prompt, memory, compact_at_tokens, keep_recent_turns)
+            compact_if_needed(model, system_prompt, memory, compact_at_tokens, keep_recent_turns, compaction_state)
 
             try:
                 reply, usage, _ = send_message(model, build_system_prompt(system_prompt, memory["summary"]), messages)

@@ -24,15 +24,15 @@ Meta: que el agente recuerde la conversación con un costo acotado.
 
 ### Arco 2: de chat a agente (en preparación)
 
-Meta: que el agente pueda actuar, con límites y con evidencia de que terminó. Lo componen v004 (herramientas y bucle), v005 (guardrails) y v006 (sensores y gate). Detalle en la [hoja de ruta](TODO.md#arco-2-de-chat-a-agente).
+Meta: que el agente pueda actuar, con límites, con evidencia de que terminó y con una memoria que puede consultar. Lo componen v004 (herramientas y bucle), v005 (guardrails), v006 (sensores y gate) y v007 (memoria consultable). Detalle en la [hoja de ruta](TODO.md#arco-2-de-chat-a-agente).
 
 ### Arco 3: observabilidad y aislamiento (en preparación)
 
-Meta: ver qué pasa dentro del bucle y ejecutar las herramientas en un entorno aislado. Lo componen v007 (trazas) y v008 (sandbox). Detalle en la [hoja de ruta](TODO.md#arco-3-observabilidad-y-aislamiento).
+Meta: ver qué pasa dentro del bucle y ejecutar las herramientas en un entorno aislado. Lo componen v008 (trazas) y v009 (sandbox). Detalle en la [hoja de ruta](TODO.md#arco-3-observabilidad-y-aislamiento).
 
 ### Arco 4: escala (en preparación)
 
-Meta: repartir el trabajo entre varios modelos y sub-agentes. Lo componen v009 (modelos por rol) y v010 (orquestador y sub-agentes). Detalle en la [hoja de ruta](TODO.md#arco-4-escala).
+Meta: repartir el trabajo entre varios modelos y sub-agentes. Lo componen v010 (modelos por rol) y v011 (orquestador y sub-agentes). Detalle en la [hoja de ruta](TODO.md#arco-4-escala).
 
 ### Cómo está escrito cada capítulo
 
@@ -236,11 +236,11 @@ keep_recent_turns = 3
 | `memory.compact_at_tokens` | Umbral de tokens sobre el que se compacta. Debe ser un entero mayor que 0. |
 | `memory.keep_recent_turns` | Cantidad máxima de turnos recientes que se conservan sin resumir, incluido el mensaje actual. Debe ser un entero mayor que 0. |
 
-La compactación busca dejar la conversación bajo la mitad del umbral, para no repetirse en el mensaje siguiente. Con `compact_at_tokens = 8000`, el resumen tiene un tope de 2000 tokens y los turnos recientes, otros 2000. Si los turnos no caben, se conservan menos. Así, unos turnos largos no pueden impedir que se compacte, pero con un umbral muy bajo un mensaje normal podría no caber: conviene que sea holgado, al menos de unos miles de tokens.
+La compactación busca dejar la conversación bajo la mitad del umbral, para no repetirse en el mensaje siguiente. Con `compact_at_tokens = 8000`, al modelo se le pide un resumen de menos de 2000 tokens y los turnos recientes tienen otros 2000. El tope real del resumen es holgado, 4000 tokens: el modelo no sabe contar tokens, y un resumen cortado se descarta entero. Si los turnos no caben, se conservan menos. Así, unos turnos largos no pueden impedir que se compacte, pero con un umbral muy bajo un mensaje normal podría no caber: conviene que sea holgado, al menos de unos miles de tokens.
 
 El archivo de la sesión guarda el resumen junto con los mensajes recientes (`{"summary": ..., "messages": [...]}`). v003 también puede abrir las sesiones de v001 y v002, y las convierte a este formato.
 
-El resumen tiene tres secciones fijas: `## Hechos`, `## Decisiones` y `## Pendientes`. En cada compactación, el modelo recibe el resumen anterior y lo actualiza con los mensajes nuevos, en vez de resumir un resumen. Así se reduce el riesgo de que se degrade con cada pasada.
+El resumen tiene tres secciones fijas: `## Hechos`, `## Decisiones` y `## Pendientes`. En cada compactación, el modelo recibe el resumen anterior y lo actualiza con los mensajes nuevos, en vez de resumir un resumen. Así se reduce el riesgo de que se degrade con cada pasada. Si el resumen no cabe en el tamaño pedido, el modelo condensa primero lo ya resuelto y lo más antiguo.
 
 Cuando se compacta, se avisa cuántos tokens libera, según una estimación local que puede diferir un poco de lo que cobra el proveedor:
 
@@ -252,7 +252,9 @@ El comando `/memoria` muestra lo que el agente recuerda en ese momento: el resum
 
 Casos especiales:
 
-- Si el modelo falla al resumir, o el resumen se corta en el tope o no trae las tres secciones, se avisa y el historial queda intacto. Se vuelve a intentar con el próximo mensaje.
+- Si el resumen se corta en el tope, se pide una vez más en el mismo turno, con la mitad del tamaño.
+- Si el modelo falla al resumir, el resumen vuelve a cortarse o no trae las tres secciones, se avisa y el historial queda intacto. Se vuelve a intentar con el próximo mensaje.
+- Cada tres compactaciones fallidas seguidas, el tope del resumen sube un octavo del umbral (1000 tokens con el umbral de 8000), hasta llegar al umbral. El aumento dura mientras el programa está abierto.
 - Si el resumen no libera tokens, se descarta.
 - Si el mensaje actual no cabe en el espacio de los turnos recientes, por ejemplo un log pegado, se avisa y se envía sin compactar. Se compacta con el mensaje siguiente.
 - El archivo de la sesión se guarda solo con el intercambio completo. Si interrumpes con `Ctrl+C` o falla el envío, queda como estaba tras el último intercambio.
@@ -291,7 +293,7 @@ La ventana de v002 es ciega al tamaño. En esta conversación de 30 mensajes, si
 
 v002 sigue enviando siempre 7 mensajes, pero durante cuatro mensajes cuesta 13 veces más, y aun así olvida lo anterior. v003 avisa en el mensaje 20 y lo compacta en el 21. El costo de esa rapidez es que el log solo queda en el resumen: si la persona pregunta por una línea concreta en el mensaje 21, el modelo ya no la tiene.
 
-> **Limitación: el resumen reemplaza, y sigue sin haber acción.** Los mensajes resumidos ya no se pueden recuperar, ni siquiera del archivo, y si el modelo omite algo al resumir, ese dato se pierde sin aviso. Un mensaje muy largo se resume en cuanto llega el siguiente, aunque la conversación siga hablando de él. Cada compactación es además una llamada más al modelo, y un resumen rechazado se paga y se vuelve a intentar con el próximo mensaje. Con esto la memoria queda mejor resuelta, pero el agente todavía solo conversa: no puede hacer nada. Las siguientes versiones tendrán que resolver esto.
+> **Limitación: el resumen reemplaza, y sigue sin haber acción.** Los mensajes resumidos ya no se pueden recuperar, ni siquiera del archivo, y si el modelo omite algo al resumir, ese dato se pierde sin aviso. En una conversación larga el resumen condensa lo más antiguo para hacer espacio, y ese detalle tampoco vuelve. Un mensaje muy largo se resume en cuanto llega el siguiente, aunque la conversación siga hablando de él. Cada compactación es al menos una llamada más al modelo, y un resumen rechazado se paga igual. Con esto la memoria queda mejor resuelta, pero el agente todavía solo conversa: no puede hacer nada. Las siguientes versiones tendrán que resolver esto.
 
 ### Comandos
 

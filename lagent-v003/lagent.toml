@@ -11,10 +11,10 @@ keep_recent_turns = 3       # v003: turnos recientes que se conservan, si caben
 # allowed_tools = ["read_file", "current_time"]
 # workdir = "workspace"
 
-# [traces]                    # v007
+# [traces]                    # v008
 #dir = "traces"
 
-# [models]                    # v009: modelo por rol
+# [models]                    # v010: modelo por rol
 # planner = "anthropic/claude-opus-5-5"
 # worker = "anthropic/claude-haiku-5-5"
 # reviewer = "openai/gpt-..."

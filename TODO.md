@@ -34,6 +34,8 @@ Resuelve: la ventana pierde contexto importante.
 - [x] Comando `/memoria` para ver qué recuerda el agente en ese momento
 - [x] Mostrar cuándo se compacta y cuántos tokens libera
 - [x] README: comparar v001, v002 y v003 con la misma conversación
+- [x] Separar el tamaño pedido al modelo del tope real del resumen, con un segundo intento más breve y un tope que sube tras tres fallos seguidos
+- [x] Regla para condensar lo ya resuelto y lo más antiguo cuando el resumen no cabe
 
 ## Arco 2: de chat a agente
 
@@ -67,9 +69,19 @@ Resuelve: el modelo se autodeclara listo sin evidencia.
 - [ ] Cortar la sesión si el mismo fallo se repite varias veces seguidas
 - [ ] Memoria entre sesiones: `progress.md` con lo hecho y un handoff cuando se acaba el presupuesto de pasos
 
+### v007: memoria consultable
+
+Resuelve: lo que la compactación resume o condensa ya no se puede recuperar (la limitación que deja [v003](lagent-v003/README.md#lo-que-todavía-falta)).
+
+- [ ] Guardar completos, en un archivo de la sesión, los mensajes que la compactación reemplaza
+- [ ] Tool para buscar en ese archivo, primero por palabras clave
+- [ ] El resumen deja una referencia a lo que condensó, para que el modelo sepa que puede buscarlo
+- [ ] Tres niveles de memoria: mensajes recientes, resumen y archivo consultable como último recurso
+- [ ] README: explicar la limitación que deja, la búsqueda por palabras no encuentra sinónimos ni paráfrasis (lo que motiva una búsqueda por embeddings)
+
 ## Arco 3: observabilidad y aislamiento
 
-### v007: trazas
+### v008: trazas
 
 Resuelve: no se sabe qué pasó adentro del loop.
 
@@ -80,7 +92,7 @@ Resuelve: no se sabe qué pasó adentro del loop.
 - [ ] Script `trace_report.py` que muestra el árbol, con opción `--errors`
 - [ ] Nota: se puede adelantar justo después de v004, porque ayuda a depurar todo lo que viene
 
-### v008: sandbox
+### v009: sandbox
 
 Resuelve: los guardrails por allowlist son frágiles.
 
@@ -91,7 +103,7 @@ Resuelve: los guardrails por allowlist son frágiles.
 
 ## Arco 4: escala
 
-### v009: varios modelos por rol
+### v010: varios modelos por rol
 
 Resuelve: costo y sesgo de autoevaluación con un solo modelo.
 
@@ -100,7 +112,7 @@ Resuelve: costo y sesgo de autoevaluación con un solo modelo.
 - [ ] Escalar al modelo grande cuando se repiten los fallos
 - [ ] Todo a través del gateway, con el rol registrado en las trazas
 
-### v010: orquestador y sub-agentes
+### v011: orquestador y sub-agentes
 
 Resuelve: tareas grandes que no caben en un solo contexto.
 
