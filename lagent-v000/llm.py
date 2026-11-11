@@ -32,5 +32,5 @@ def send_message(system_prompt, user_message):
         api_key=API_KEY,
         api_base=BASE_URL,
     )
-    # La respuesta trae una lista de opciones ("choices"); se toma el texto de la primera.
+    # La respuesta trae una lista de opciones ("choices") y se toma el texto de la primera.
     return response.choices[0].message.content # type: ignore

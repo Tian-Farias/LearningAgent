@@ -32,5 +32,5 @@ def send_message(model, system_prompt, messages):
     )
     # "usage" informa los tokens enviados y puede venir vacío según el proveedor o el proxy.
     usage = getattr(response, "usage", None)
-    # La respuesta trae una lista de opciones ("choices"); se toma el texto de la primera.
+    # La respuesta trae una lista de opciones ("choices") y se toma el texto de la primera.
     return response.choices[0].message.content, usage  # type: ignore

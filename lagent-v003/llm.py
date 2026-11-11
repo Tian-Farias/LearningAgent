@@ -13,7 +13,7 @@ BASE_URL = os.environ.get("BASE_URL")
 # Recibe el modelo, el prompt de sistema (instrucciones para el modelo), el historial de
 # mensajes y, si hace falta, un tope de tokens para la respuesta.
 # Devuelve el texto de la respuesta, el uso de tokens (que puede ser None) y el motivo por
-# el que terminó ("length" significa que se cortó al llegar al tope; también puede ser None).
+# el que terminó ("length" significa que se cortó al llegar al tope. También puede ser None).
 # Si algo falla (red, clave inválida, etc.) lanza la excepción: quien la llama decide
 # qué hacer, así un error nunca se confunde con una respuesta del modelo.
 def send_message(model, system_prompt, messages, max_tokens=None):
@@ -35,7 +35,7 @@ def send_message(model, system_prompt, messages, max_tokens=None):
     )
     # "usage" informa los tokens enviados y puede venir vacío según el proveedor o el proxy.
     usage = getattr(response, "usage", None)
-    # La respuesta trae una lista de opciones ("choices"); se toma la primera.
+    # La respuesta trae una lista de opciones ("choices") y se toma la primera.
     choice = response.choices[0]  # type: ignore
     return choice.message.content, usage, getattr(choice, "finish_reason", None)
 

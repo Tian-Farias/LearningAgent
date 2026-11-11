@@ -16,7 +16,7 @@ def show_memory(memory):
             content = content[:PREVIEW_CHARS] + "..."
         print(f"- {message['role']}: {content}")
 
-# Sistema de comandos basicos para controlar el chat.
+# Sistema de comandos básicos para controlar el chat.
 # Recibe la memoria para poder modificarla (por ejemplo, /clear la vacía).
 # Devuelve:
 #   - None: el texto no es un comando, hay que enviarlo al modelo.

@@ -1,6 +1,10 @@
 # bench: medir cómo se comporta cada versión
 
-Esta carpeta tiene las herramientas para medir las versiones de `lagent` con datos reales. Sirve para responder dos preguntas con números en lugar de intuición:
+> [Índice de la historia](../README.md#cómo-leer-esta-historia) · Esta carpeta guarda la herramienta que compara las versiones del agente entre sí.
+
+Cada versión de `lagent` termina con una limitación que motiva la siguiente. En el [arco de la memoria](../README.md#arco-1-memoria), [v001](../lagent-v001/README.md) recuerda todo pero su costo crece sin límite, [v002](../lagent-v002/README.md) acota el costo pero olvida de golpe, y [v003](../lagent-v003/README.md) resume lo viejo para conservarlo. Los READMEs de cada versión cuentan esas limitaciones con ejemplos cortos. Esta carpeta las mide.
+
+Tiene las herramientas para medir las versiones con datos reales. Sirve para responder dos preguntas con números en lugar de intuición:
 
 1. **¿Cuánto cuesta cada versión?** Cuántos tokens se envían al modelo en cada mensaje y cuánto crece eso a lo largo de una conversación.
 2. **¿Cuánto recuerda cada versión?** Si después de muchos mensajes el agente todavía sabe lo que le contaste al principio.
@@ -20,7 +24,7 @@ Si es la primera vez que trabajas con modelos de lenguaje, estas ideas te van a 
 ## Qué hay en esta carpeta
 
 | Archivo | Para qué sirve |
-|---|---|
+| --- | --- |
 | `conversacion.json` | El guion: los 100 mensajes que se le envían al agente, en orden. |
 | `run.py` | Ejecuta una versión con el guion y registra cada llamada al modelo. |
 | `report.py` | Lee los registros y arma un resumen comparando las versiones. |
@@ -79,11 +83,11 @@ El guion incluido está armado así:
 
 ## Requisitos
 
-Los mismos que para ejecutar `lagent` (ver el README de la raíz):
+Los mismos que para ejecutar `lagent` (ver [Requisitos](../README.md#requisitos) en el README de la raíz):
 
 - Python 3.11 o superior.
-- `litellm` instalado (`pip install litellm`).
-- Las variables de entorno `API_KEY` y `BASE_URL` configuradas.
+- `litellm` instalado (`pip install -r requirements.txt` desde la raíz).
+- Las variables de entorno del proveedor, como se explica en [Conectarse a un proveedor](../README.md#conectarse-a-un-proveedor). No hacen falta para la prueba con `BENCH_MOCK=1`.
 
 ## Cómo usarlo
 
@@ -117,26 +121,34 @@ Cada corrida deja un archivo en `runs/`, por ejemplo `runs/lagent-v001-bench-202
 python report.py conversacion.json runs/*.jsonl
 ```
 
-El reporte tiene dos partes. La primera compara el costo:
+El reporte tiene hasta cuatro partes. La primera resume cada versión. Este ejemplo sale de una prueba con `BENCH_MOCK=1`, por eso `tok. cobrados` vale 0 y solo la estimación local tiene sentido:
 
-```
-versión      llamadas  resúmenes  tokens env.  tokens resp.  costo USD  errores
-lagent-v001       100          0      1471970          2000     0.0011        0
-lagent-v003       103          3       438523          2060     0.0011        0
+```text
+versión      llamadas  errores resum. ok resum. mal  tok. cobrados  tok. estimados  tok. resp.  costo USD
+lagent-v001       100        0         0          0              0         1471970        2000     0.0011
+lagent-v002       100        0         0          0              0           89340        2000     0.0011
+lagent-v003       103        0         3          0              0          438523        2060     0.0011
 ```
 
 - **llamadas:** cuántas veces se llamó al modelo. En v003 hay más llamadas que turnos porque cada compactación es una llamada extra.
-- **resúmenes:** cuántas de esas llamadas fueron para compactar la memoria.
-- **tokens env.:** tokens enviados al modelo en toda la conversación.
-- **tokens resp.:** tokens que respondió el modelo.
-- **costo USD:** costo calculado con la tabla de precios de litellm. Aparece `s/d` (sin dato) si litellm no conoce el precio del modelo.
 - **errores:** llamadas que fallaron.
+- **resum. ok** y **resum. mal:** compactaciones de memoria que salieron bien y que fallaron. Una falla si la llamada da error o si el resumen se cortó por el tope de tokens.
+- **tok. cobrados:** tokens enviados según informa el proveedor, en las llamadas exitosas. Es lo que se cobra.
+- **tok. estimados:** tokens enviados según la estimación local, incluidas las llamadas que fallaron.
+- **tok. resp.:** tokens que respondió el modelo.
+- **costo USD:** costo calculado con la tabla de precios de litellm. Aparece `s/d` (sin dato) si litellm no conoce el precio del modelo.
 
-La segunda parte revisa la memoria:
+La segunda parte aparece si entre las corridas está v001. Compara cada versión con ella en tokens cobrados, de entrada y de salida, y suma a v003 lo que gastan sus compactaciones. Con `BENCH_MOCK=1` no hay tokens cobrados, así que estos números no dicen nada.
 
-```
+La tercera parte aparece solo si hubo errores, agrupados por su texto para ver rápido qué está fallando.
+
+La última parte revisa la memoria con las preguntas de control:
+
+```text
 turno 50 «¿Te acuerdas de cómo me llamo?» -> lagent-v001: sí, lagent-v002: no, lagent-v003: sí
 ```
+
+Si la llamada de esa pregunta falló, aparece `error`, porque no hay respuesta que revisar y no corresponde contarlo como olvido. Por el mismo motivo, una corrida hecha con `--sin-contenido` muestra `sin contenido`.
 
 Para leer el comienzo de cada respuesta, agrega `--detalle`:
 
@@ -151,7 +163,7 @@ Además, `report.py` deja el archivo `runs/tokens_por_turno.csv`, con una fila p
 Cada línea de un archivo `.jsonl` es un objeto JSON con los datos de una llamada al modelo. JSONL significa "JSON por líneas": un objeto por línea, fácil de leer con cualquier lenguaje.
 
 | Campo | Qué es |
-|---|---|
+| --- | --- |
 | `version` | La versión medida, por ejemplo `lagent-v003`. |
 | `turn` | El número del paso del guion que se estaba procesando. |
 | `kind` | `chat` para una respuesta a la persona, `summary` para una compactación de memoria. |
@@ -176,16 +188,15 @@ Los campos `sent` y `reply` guardan la conversación completa. Si no los necesit
 python run.py ../lagent-v003 conversacion.json --sin-contenido
 ```
 
+Sin `reply` el reporte no puede revisar las preguntas de control, así que esa opción sirve solo para medir el costo.
+
 ## Cosas a tener en cuenta
 
 - **Los modelos no responden siempre igual.** Si corres dos veces la misma versión, los números van a variar un poco. Para conclusiones firmes, conviene correr cada versión más de una vez.
 - **La revisión automática es simple.** Busca el texto esperado dentro de la respuesta, sin entenderla. En la pregunta de la ciudad, una respuesta que diga "antes Temuco, ahora Valparaíso" pasa la revisión, y una que mencione las dos ciudades sin aclarar cuál es la actual también. Por eso existe `--detalle`.
 - **v003 compacta según su `lagent.toml`.** Si la conversación no llega al umbral de `compact_at_tokens`, v003 se comporta igual que v001. Con respuestas reales, más largas que las simuladas, el umbral se alcanza antes.
-- **Los registros guardan tus conversaciones.** La carpeta `runs/` no debe subirse al repositorio. Agrega esta línea al `.gitignore` de la raíz:
-
-  ```gitignore
-  bench/runs/
-  ```
+- **Los registros guardan tus conversaciones.** Por eso la carpeta `runs/` está en el `.gitignore` de la raíz y no se sube al repositorio.
+- **`runs/` se crea donde ejecutas.** `run.py` y `report.py` usan la carpeta `runs/` del directorio actual, así que conviene ejecutarlos siempre desde `bench/`.
 
 ## Crear tu propio guion
 
@@ -196,3 +207,7 @@ Puedes copiar `conversacion.json` y modificarlo para probar otras situaciones. A
 - Varios datos que cambian, para ver si el resumen se queda con el más reciente.
 
 Después ejecutas `run.py` con tu archivo en lugar de `conversacion.json`.
+
+---
+
+> [Índice de la historia](../README.md#cómo-leer-esta-historia) · [v000](../lagent-v000/README.md) · [v001](../lagent-v001/README.md) · [v002](../lagent-v002/README.md) · [v003](../lagent-v003/README.md)

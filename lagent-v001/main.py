@@ -2,6 +2,8 @@
 # Se puede ejecutar desde la terminal y enviar mensajes al modelo de lenguaje.
 # A diferencia de v000, guarda el historial de mensajes en una variable y en un
 # archivo, así el modelo recuerda lo anterior y la conversación sobrevive entre sesiones.
+# Limitación: envía el historial completo en cada mensaje, así que el costo crece sin
+# límite con la sesión y solo se frena a mano con /clear.
 #
 # El agente está separado en un archivo por funcionalidad:
 #   main.py: el bucle del chat.
@@ -9,6 +11,8 @@
 #   memory.py: carga y guarda el historial.
 #   llm.py: envía la conversación al modelo.
 #   commands.py: comandos del chat.
+#
+# El porqué de cada decisión está en el README.md de esta carpeta.
 #
 # Uso: python main.py [nombre_de_sesion], indicando la ruta si se ejecuta desde otra carpeta.
 # Cada sesión se guarda en memory/<nombre_de_sesion>.json (por defecto "default"),
@@ -30,7 +34,7 @@ from memory import load_memory, save_memory
 # Función principal: bucle de chat en la terminal.
 # Lee lo que escribe el usuario, lo envía al modelo y muestra la respuesta.
 def main():
-    # El nombre de la sesión se toma del primer argumento; define el archivo de memoria.
+    # El nombre de la sesión se toma del primer argumento y define el archivo de memoria.
     # Se rechaza en vez de "limpiarlo": así un nombre con "/" o ".." no se transforma
     # en silencio en otro archivo, y no hay forma de salirse de la carpeta memory/.
     session = sys.argv[1] if len(sys.argv) > 1 else "default"
@@ -53,7 +57,7 @@ def main():
                 continue
 
             # Si el texto es un comando, handle_command lo atiende y devuelve
-            # True (salir) o False (seguir); si no lo es, devuelve None.
+            # True (salir) o False (seguir). Si no lo es, devuelve None.
             result = handle_command(user_input, messages, memory_path)
 
             if result is True:

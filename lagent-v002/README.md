@@ -1,14 +1,16 @@
 # lagent-v002: ventana de memoria
 
+> **Arco 1: memoria**, capítulo 2 de 3 · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Anterior: [v001, memoria de la conversación](../lagent-v001/README.md) · Siguiente: [v003, compactación de memoria](../lagent-v003/README.md)
+
 ## En una frase
 
 Agregamos una ventana: guardamos en disco el historial completo, enviamos al modelo solo los últimos mensajes y pasamos la configuración a `lagent.toml`.
 
 ## El problema que resuelve
 
-En v001 enviábamos el historial completo en cada mensaje. Eso le daba memoria al modelo, pero también hacía que cada mensaje costara más que el anterior, porque las APIs cobran por los tokens enviados. Con el tiempo se podía superar el límite de contexto del modelo. La única forma de frenarlo era `/clear`, que dependía de que alguien se acordara de usarlo.
+En [v001](../lagent-v001/README.md) enviábamos el historial completo en cada mensaje. Eso le daba memoria al modelo, pero también hacía que cada mensaje costara más que el anterior, porque las APIs cobran por los tokens enviados. Con el tiempo se podía superar el límite de contexto del modelo. La única forma de frenarlo era `/clear`, que dependía de que alguien se acordara de usarlo.
 
-La pregunta de esta versión es cómo evitar que lo enviado crezca sin límite, sin borrar la conversación guardada.
+La pregunta de esta versión es cómo evitar que lo enviado crezca sin límite, sin borrar la conversación guardada. Es el segundo capítulo del [arco de la memoria](../README.md#arco-1-memoria): v001 consiguió que el agente recuerde, y ahora toca acotar el costo.
 
 ## Qué hay en esta carpeta
 
@@ -20,7 +22,7 @@ La pregunta de esta versión es cómo evitar que lo enviado crezca sin límite, 
 | `config.py` | Lee y valida `lagent.toml`. | Modificado |
 | `llm.py` | Envía la conversación al modelo. Ahora recibe el modelo como argumento. | Modificado |
 | `commands.py` | Comandos del chat. | Sin cambios |
-| `memory/` | Carpeta heredada de v001. Esta versión guarda en `mem_session/`, que se crea con el primer guardado. | Sin cambios |
+| `mem_session/` | Carpeta de las sesiones, en lugar de la `memory/` de v001. Trae el mismo `.fakeignore` vacío para quedar en el repositorio. | Nuevo |
 
 ## Cómo fluye un mensaje
 
@@ -93,7 +95,7 @@ El indicador de v001 mostraba solo tokens. Ahora también dice cuántos mensajes
 
 ### La configuración sale del código
 
-Con un parámetro nuevo que ajustar, pasamos la configuración a un archivo. Cada versión tiene el suyo junto a su código. El archivo incluye también, comentadas, claves de versiones futuras.
+Con un parámetro nuevo que ajustar, pasamos la configuración a un archivo. Así los valores que ajustamos quedan separados del código del agente, y podemos cambiarlos sin tocarlo. Cada versión tiene el suyo junto a su código. El archivo incluye también, comentadas, claves de versiones futuras, que adelantan lo planificado en la [hoja de ruta](../TODO.md).
 
 `lagent.toml`:
 
@@ -146,18 +148,18 @@ window = 8                 # v002: mensajes que se envían al modelo
 
 ### Cambios menores que acompañan
 
-Como la configuración ahora se carga con una función, `llm.py` deja de importar el modelo desde `config.py` y lo recibe como argumento de `send_message`. Las sesiones pasan a guardarse en la carpeta que indica `memory.dir`. Con el valor actual es `mem_session/`, relativa a la carpeta de la versión, aunque también acepta una ruta absoluta. El formato del archivo de sesión es el mismo de v001.
+Como la configuración ahora se carga con una función, `llm.py` deja de importar el modelo desde `config.py` y lo recibe como argumento de `send_message`. Las sesiones pasan a guardarse en la carpeta que indica `memory.dir`. Con el valor actual es `mem_session/`, relativa a la carpeta de la versión, aunque también acepta una ruta absoluta. El nombre cambia respecto de la `memory/` de v001 para evitar conflictos con el módulo `memory.py`, que vive en la misma carpeta. El formato del archivo de sesión es el mismo de v001.
 
 ## Cómo probarlo
 
-Con las mismas variables de entorno de siempre:
+Con las mismas variables de entorno de siempre (ver [Conectarse a un proveedor](../README.md#conectarse-a-un-proveedor)):
 
 ```bash
 cd lagent-v002
 python main.py pruebas
 ```
 
-Si enviamos seis mensajes seguidos, con `window = 8`, el indicador debería mostrar esta secuencia. Además aparecen los tokens, si el proveedor los informa:
+El valor `window = 8` es bajo a propósito: el recorte aparece después de pocos mensajes, sin tener que escribir una conversación larga. Si enviamos seis mensajes seguidos, el indicador debería mostrar esta secuencia. Además aparecen los tokens, si el proveedor los informa:
 
 ```text
 [mensajes enviados: 1 de 1]
@@ -179,7 +181,7 @@ mkdir -p lagent-v002/mem_session
 cp lagent-v001/memory/pruebas.json lagent-v002/mem_session/pruebas.json
 ```
 
-Después ejecutamos `python main.py pruebas` en la carpeta de cada versión y enviamos el mismo mensaje. La diferencia de tokens muestra lo que ahorra la ventana.
+Después ejecutamos `python main.py pruebas` en la carpeta de cada versión y enviamos el mismo mensaje. La diferencia de tokens muestra lo que ahorra la ventana. Para medirlo en una conversación larga y con preguntas de control, están los [benchmarks](../bench/README.md).
 
 Por último, podemos comprobar la validación cambiando el archivo a `window = 0`:
 
@@ -193,14 +195,10 @@ El modelo olvida de golpe. Lo que queda fuera de la ventana desaparece por compl
 
 Además, la ventana cuenta mensajes y no tokens. Unos pocos mensajes muy largos todavía pueden costar mucho o superar el límite de contexto.
 
-v003 ataca estos dos puntos.
+Los [benchmarks](../bench/README.md) miden este olvido con preguntas de control sobre datos dichos al principio de una conversación larga, y también el ahorro frente a v001.
 
-## Preguntas para el autor
+[v003](../lagent-v003/README.md) ataca estos dos puntos.
 
-- ¿Por qué `window = 8`? ¿Probaste otros valores?
-- ¿Por qué el nombre `mem_session/` para reemplazar a `memory/`? El código solo muestra el cambio de carpeta.
-- `lagent-v002/memory/` sigue en la carpeta con su `.fakeignore`, aunque esta versión guarda en `mem_session/`. ¿Es intencional o conviene limpiarlo? Allí hay además un `default.json` local, ignorado por git, que esta versión no lee.
-- ¿Por qué `llm.py` recibe el modelo como argumento en lugar de leerlo de la configuración? ¿Fue una consecuencia de pasar a `load_config()` o una decisión de diseño?
-- ¿Por qué TOML y por qué sin valores por defecto en el código?
-- ¿Por qué incluir en el archivo las claves comentadas de versiones futuras?
-- ¿Tienes un caso real en que el modelo haya olvidado un dato por la ventana, o una medición real del ahorro frente a v001? La tabla del README raíz es simulada.
+---
+
+> **Arco 1: memoria**, capítulo 2 de 3 · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Anterior: [v001, memoria de la conversación](../lagent-v001/README.md) · Siguiente: [v003, compactación de memoria](../lagent-v003/README.md)

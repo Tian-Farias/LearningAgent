@@ -1,6 +1,6 @@
 # Comandos del chat: /exit, /quit y /help.
 
-# Sistema de comandos basicos para controlar el chat.
+# Sistema de comandos básicos para controlar el chat.
 # Devuelve:
 #   - None: el texto no es un comando, hay que enviarlo al modelo.
 #   - True: era un comando de salida, hay que terminar el chat.

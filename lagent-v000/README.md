@@ -1,14 +1,16 @@
 # lagent-v000: conversación sin memoria
 
+> **Punto de partida** · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Anterior: ninguna, este es el punto de partida · Siguiente: [v001, memoria de la conversación](../lagent-v001/README.md)
+
 ## En una frase
 
 Armamos lo mínimo para hablar con un modelo desde la terminal: un bucle que lee un mensaje, lo envía con `litellm` y muestra la respuesta.
 
 ## El problema que resuelve
 
-Este repositorio busca entender, construyendo, qué separa a una simple llamada a un modelo de lenguaje de un agente. Para eso necesitamos un punto de partida, y la primera pregunta es la más básica: ¿qué es lo mínimo que hace falta para conversar con un modelo desde un programa nuestro?
+Se habla mucho de IA y de agentes, pero pocas veces se muestra cómo construir uno desde cero. Este repositorio busca entender, construyendo, qué separa a una simple llamada a un modelo de lenguaje de un agente. Para eso necesitamos un punto de partida, y la primera pregunta es la más básica: ¿qué es lo mínimo que hace falta para conversar con un modelo desde un programa nuestro?
 
-La respuesta de v000 es un chat en la terminal con comandos básicos. Cada mensaje viaja solo, sin memoria ni contexto. Todavía estamos lejos de un agente, y esa distancia es la que van a recorrer las versiones siguientes.
+La respuesta de v000 es un chat en la terminal con comandos básicos. Cada mensaje viaja solo, sin memoria ni contexto. Todavía estamos lejos de un agente, y esa distancia es la que van a recorrer las versiones siguientes. El camino completo está en la [tabla de versiones](../README.md#versiones) y en la [hoja de ruta](../TODO.md).
 
 ## Qué hay en esta carpeta
 
@@ -20,6 +22,8 @@ v000 es la primera versión, así que todos los archivos son nuevos.
 | `config.py` | El modelo a usar y las instrucciones generales. | Nuevo |
 | `llm.py` | Envía el mensaje al modelo con `litellm`. | Nuevo |
 | `commands.py` | Atiende los comandos `/exit`, `/quit` y `/help`. | Nuevo |
+
+El programa es corto, pero lo separamos en un archivo por tipo de función. Así se lee con facilidad desde el principio, y a medida que el agente crece se ve en qué archivo aparece cada capacidad nueva. La primera versión de v000 era un único `lagent-v000.py`, y el historial de git conserva ese paso.
 
 ## Cómo fluye un mensaje
 
@@ -83,7 +87,9 @@ Hay una decisión fina en el último caso. Un texto que empieza con `/` y que no
 
 ### La llamada al modelo
 
-`llm.py` tiene una sola función, `send_message`. Para el modelo, una conversación es una lista de mensajes con un rol. En v000 esa lista siempre tiene dos elementos: las instrucciones y lo que acaba de escribir la persona.
+`llm.py` tiene una sola función, `send_message`, y habla con el modelo a través de `litellm`. Elegimos esta biblioteca porque da acceso a cualquier proveedor con la misma llamada, desde los más conocidos hasta un modelo local. Así no gastamos tiempo en integraciones propias de cada proveedor, y el agente funciona en cualquier lado.
+
+Para el modelo, una conversación es una lista de mensajes con un rol. En v000 esa lista siempre tiene dos elementos: las instrucciones y lo que acaba de escribir la persona.
 
 `llm.py`:
 
@@ -138,15 +144,17 @@ Un segundo `try`, que envuelve todo el bucle, atiende `Ctrl+C` y `Ctrl+D` para s
 MODEL = os.environ.get("MODEL", "anthropic/claude-haiku-5-5")
 ```
 
+Elegimos `anthropic/claude-haiku-5-5` como valor por defecto porque es el modelo más económico de la familia Claude y tiene buena relación entre calidad y precio.
+
 La clave de la API y la URL base también vienen de variables de entorno, para no dejar datos sensibles escritos en el código. Esas dos las lee `llm.py`, que es quien las usa.
 
 ## Cómo probarlo
 
-Necesitamos Python, `litellm` (`pip install litellm`) y las variables de entorno:
+Necesitamos Python y `litellm`, que se instala con `pip install -r requirements.txt` desde la raíz del repositorio. También las variables de entorno del proveedor. `BASE_URL` es opcional con Anthropic, OpenAI y OpenRouter, y la sección [Conectarse a un proveedor](../README.md#conectarse-a-un-proveedor) del README raíz tiene un ejemplo para cada uno.
 
 ```bash
 export API_KEY="tu-clave"
-export BASE_URL="https://tu-endpoint"
+export BASE_URL="https://tu-endpoint"   # opcional con OpenAI, Anthropic y OpenRouter
 cd lagent-v000
 python main.py
 ```
@@ -169,17 +177,14 @@ Como no hay versión anterior, la prueba interesante es la que deja a la vista l
 >>> ¿Cómo me llamo?
 ```
 
-La segunda llamada lleva solo el prompt de sistema y `¿Cómo me llamo?`, así que el modelo no tiene de dónde sacar el nombre. Vamos a repetir esta misma prueba en v001 para ver la diferencia.
+La segunda llamada lleva solo el prompt de sistema y `¿Cómo me llamo?`, así que el modelo no tiene de dónde sacar el nombre. Vamos a repetir esta misma prueba en [v001](../lagent-v001/README.md#cómo-probarlo) para ver la diferencia.
 
 ## Lo que todavía falta
 
 El modelo no recuerda nada. Cada mensaje es independiente, así que no se puede sostener una conversación ni retomarla después, porque nada queda guardado. También hay un detalle menor: si el modelo devuelve un contenido vacío, `print` muestra `None` en pantalla, porque todavía no tratamos ese caso.
 
-v001 ataca la falta de memoria.
+[v001](../lagent-v001/README.md) ataca la falta de memoria y abre el primer arco de la historia, el [arco de la memoria](../README.md#arco-1-memoria).
 
-## Preguntas para el autor
+---
 
-- ¿Por qué elegimos `litellm` en lugar del SDK de un proveedor concreto? El código solo dice que sirve para interactuar con muchos modelos de manera sencilla.
-- ¿Por qué `anthropic/claude-haiku-5-5` como modelo por defecto?
-- ¿Por qué separar en cuatro archivos un programa tan corto? El historial de git muestra que v000 existió como un único `lagent-v000.py`. ¿Qué motivó el cambio y conviene contarlo en el artículo?
-- ¿Hubo alguna primera prueba o anécdota real de este primer chat (por ejemplo, la primera vez que notaste que no recordaba nada) que valga la pena incluir?
+> **Punto de partida** · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Siguiente: [v001, memoria de la conversación](../lagent-v001/README.md)

@@ -33,3 +33,5 @@ env/
 NOTAS.md
 PROMPT_DOC.md
 CLAUDE.md
+# Registros de los benchmarks (guardan conversaciones completas)
+bench/runs/

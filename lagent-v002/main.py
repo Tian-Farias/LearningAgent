@@ -14,6 +14,8 @@
 #   commands.py: comandos del chat.
 #   lagent.toml: configuración de esta versión.
 #
+# El porqué de cada decisión está en el README.md de esta carpeta.
+#
 # Uso: python main.py [nombre_de_sesion], indicando la ruta si se ejecuta desde otra carpeta.
 # Cada sesión se guarda en <memory.dir>/<nombre_de_sesion>.json (por defecto "default"),
 # y memory.dir es relativo a la carpeta de esta versión.
@@ -48,7 +50,7 @@ def main():
     memory_dir = config["memory"]["dir"]
     window = config["memory"]["window"]
 
-    # El nombre de la sesión se toma del primer argumento; define el archivo de memoria.
+    # El nombre de la sesión se toma del primer argumento y define el archivo de memoria.
     # Se rechaza en vez de "limpiarlo": así un nombre con "/" o ".." no se transforma
     # en silencio en otro archivo, y no hay forma de salirse de la carpeta de sesiones.
     session = sys.argv[1] if len(sys.argv) > 1 else "default"
@@ -58,7 +60,7 @@ def main():
 
     # Memoria: lista con todos los mensajes de la conversación, en orden.
     # Cada elemento es {"role": "user" | "assistant", "content": texto}.
-    # Se guarda completa en el archivo; al modelo se envía solo la ventana.
+    # Se guarda completa en el archivo, y al modelo se envía solo la ventana.
     messages = load_memory(memory_path)
     print(f"Sesión '{session}' ({len(messages)} mensajes en memoria). Usa /help para ver los comandos.")
 
@@ -72,7 +74,7 @@ def main():
                 continue
 
             # Si el texto es un comando, handle_command lo atiende y devuelve
-            # True (salir) o False (seguir); si no lo es, devuelve None.
+            # True (salir) o False (seguir). Si no lo es, devuelve None.
             result = handle_command(user_input, messages, memory_path)
 
             if result is True:

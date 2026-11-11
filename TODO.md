@@ -2,11 +2,15 @@
 
 Hoja de ruta para las próximas versiones de `lagent`. Cada versión agrega una sola capacidad y deja a la vista la limitación que motiva la siguiente.
 
+Las versiones ya construidas tienen su capítulo en la carpeta de cada una, y el [README raíz](README.md#cómo-leer-esta-historia) explica en qué orden leerlos. Esta hoja de ruta es lo que viene. Cuando una versión se construye, sus casillas se marcan aquí y su historia pasa a contarse en su propio README.
+
 ## v001: pendientes de cierre
 
 - [x] Quitar los espacios al final de línea en `"role": "system", `, `"role": "user", ` y `"role": "assistant", ` (`ruff check --select W291 --fix lagent-v001.py`)
 
 ## Arco 1: memoria
+
+Meta: que el agente recuerde la conversación con un costo acotado. El arco empieza en v001, que da memoria reenviando todo el historial.
 
 ### v002: ventana de memoria
 

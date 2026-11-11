@@ -1,6 +1,8 @@
-# Sistema converscional mas simple que se puede hacer con litellm.
+# lagent-v000: conversación sin memoria.
+# El sistema conversacional más simple que se puede hacer con litellm.
 # Se puede ejecutar desde la terminal y enviar mensajes al modelo de lenguaje.
-# No tiene memoria ni contexto, cada mensaje es independiente.
+# Es el punto de partida de la historia: todavía no hay versión anterior.
+# Limitación: no tiene memoria ni contexto, cada mensaje es independiente.
 #
 # El agente está separado en un archivo por funcionalidad:
 #   main.py: el bucle del chat.
@@ -8,7 +10,9 @@
 #   llm.py: envía el mensaje al modelo.
 #   commands.py: comandos del chat.
 #
-# Uso, desde la carpeta de esta versión: python main.py
+# El porqué de cada decisión está en el README.md de esta carpeta.
+#
+# Uso: python main.py, indicando la ruta si se ejecuta desde otra carpeta.
 
 from commands import handle_command
 from config import SYSTEM_PROMPT
@@ -27,7 +31,7 @@ def main():
                 continue
 
             # Si el texto es un comando, handle_command lo atiende y devuelve
-            # True (salir) o False (seguir); si no lo es, devuelve None.
+            # True (salir) o False (seguir). Si no lo es, devuelve None.
             result = handle_command(user_input)
 
             if result is True:

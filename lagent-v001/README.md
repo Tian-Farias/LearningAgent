@@ -1,14 +1,18 @@
 # lagent-v001: memoria de la conversación
 
+> **Arco 1: memoria**, capítulo 1 de 3 · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Anterior: [v000, conversación sin memoria](../lagent-v000/README.md) · Siguiente: [v002, ventana de memoria](../lagent-v002/README.md)
+
 ## En una frase
 
 Agregamos memoria: el historial se guarda en una variable y en un archivo, así el modelo recuerda lo anterior y la conversación sobrevive entre sesiones.
 
 ## El problema que resuelve
 
-En v000 cada mensaje viajaba solo. Si escribíamos "Me llamo Ana" y después preguntábamos "¿Cómo me llamo?", la segunda llamada llevaba únicamente esa pregunta y el modelo no tenía de dónde sacar el nombre. Tampoco se podía retomar una conversación, porque nada quedaba guardado.
+En [v000](../lagent-v000/README.md) cada mensaje viajaba solo. Si escribíamos "Me llamo Ana" y después preguntábamos "¿Cómo me llamo?", la segunda llamada llevaba únicamente esa pregunta y el modelo no tenía de dónde sacar el nombre. Tampoco se podía retomar una conversación, porque nada quedaba guardado.
 
 La clave para entender esta versión es que el modelo no guarda nada entre llamadas. Para que "recuerde", tenemos que enviarle toda la conversación cada vez.
+
+Con esta versión empieza el [arco de la memoria](../README.md#arco-1-memoria). Sus tres capítulos persiguen la misma meta: que el agente recuerde la conversación con un costo acotado. v001 consigue que recuerde, y los dos capítulos siguientes se ocupan del costo.
 
 ## Qué hay en esta carpeta
 
@@ -90,7 +94,7 @@ El mensaje del usuario se agrega antes de llamar al modelo, para que viaje junto
                 continue
 ```
 
-Una respuesta vacía recibe el mismo trato. El comentario explica el riesgo: ese mensaje vacío se reenviaría en cada pregunta siguiente.
+Una respuesta vacía recibe el mismo trato. El comentario explica el riesgo: ese mensaje vacío se reenviaría en cada pregunta siguiente. Es una protección preventiva, para un caso que todavía no hemos visto ocurrir.
 
 `main.py`:
 
@@ -106,7 +110,7 @@ Una respuesta vacía recibe el mismo trato. El comentario explica el riesgo: ese
 
 ### Tokens a la vista, fuera del try
 
-Antes de cada respuesta mostramos cuántos tokens enviamos. Es lo que se cobra y crece con el historial, así que hace visible el precio de recordar.
+Antes de cada respuesta mostramos cuántos tokens enviamos. Es lo que se cobra y crece con el historial, así que hace visible el precio de recordar. La cifra es de referencia. La medición completa, con los tokens de la respuesta y el costo de cada llamada, está en los [benchmarks](../bench/README.md).
 
 Vale la pena mirar dónde está este código. Si estuviera dentro del `try` de la llamada, un problema al leer el contador activaría el `except`, que descarta el intercambio, y perderíamos una respuesta que el modelo ya generó y que ya se cobró.
 
@@ -153,7 +157,9 @@ Al cargar, un archivo dañado o que no contiene una lista se avisa en pantalla y
 
 ### Una sesión por archivo
 
-El primer argumento elige la sesión, y cada sesión es un archivo `memory/<nombre>.json`. Como ese nombre termina formando una ruta, lo validamos. La decisión está en el comentario: rechazamos el nombre en lugar de limpiarlo, para que un `../x` no se transforme en silencio en otro archivo.
+El primer argumento elige la sesión, y cada sesión es un archivo `memory/<nombre>.json`. Guardamos en JSON porque conserva la estructura de la lista de mensajes. Un texto libre, como markdown, habría que interpretarlo para recuperar cada mensaje. Con JSON el historial se carga directo como lista, y también se puede llevar sin esfuerzo a una base de datos u otro medio.
+
+Como el nombre de la sesión termina formando una ruta, lo validamos. La decisión está en el comentario: rechazamos el nombre en lugar de limpiarlo, para que un `../x` no se transforme en silencio en otro archivo.
 
 `main.py`:
 
@@ -189,7 +195,7 @@ Como ahora hay algo que recordar, también necesitamos poder borrarlo. `/clear` 
 
 ## Cómo probarlo
 
-Con las mismas variables de entorno de v000, repetimos la prueba de esa versión:
+Con las mismas variables de entorno de v000 (ver [Conectarse a un proveedor](../README.md#conectarse-a-un-proveedor)), repetimos la [prueba de esa versión](../lagent-v000/README.md#cómo-probarlo):
 
 ```bash
 cd lagent-v001
@@ -224,12 +230,10 @@ Nombre de sesión inválido: usa solo letras, números, '-' y '_'.
 
 Este sistema de memoria es ineficiente. Enviamos el historial completo en cada mensaje y solo se vacía a mano con `/clear`. La memoria crece sin límite, así que cada mensaje lleva más contexto que el anterior. Como las APIs cobran por los tokens enviados, el costo de cada respuesta aumenta con la sesión, y tarde o temprano se puede superar el límite de contexto del modelo.
 
-v002 ataca este problema: el historial crece sin límite.
+Los [benchmarks](../bench/README.md) miden ese crecimiento en una conversación de 100 mensajes.
 
-## Preguntas para el autor
+[v002](../lagent-v002/README.md) ataca este problema: el historial crece sin límite.
 
-- ¿Viste alguna vez que la API rechazara un mensaje vacío y dejara una sesión inutilizable? El comentario dice "podría", y una experiencia real le daría fuerza al relato.
-- ¿La escritura con archivo temporal y la validación del nombre de sesión responden a una falla que tuviste, o fueron prevención? El historial de git tiene un commit de "Arreglo de algunos detalles en el manejo de memoria", pero el código no cuenta qué se rompió.
-- ¿Por qué JSON y un archivo por sesión, en lugar de otra forma de guardar?
-- ¿Por qué mostramos solo los tokens enviados y dejamos fuera los de la respuesta, que también se cobran?
-- ¿Tienes una cifra real de cómo crecieron los tokens en una sesión larga? Sirve para ilustrar la limitación en el artículo.
+---
+
+> **Arco 1: memoria**, capítulo 1 de 3 · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Anterior: [v000, conversación sin memoria](../lagent-v000/README.md) · Siguiente: [v002, ventana de memoria](../lagent-v002/README.md)

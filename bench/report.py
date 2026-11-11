@@ -109,7 +109,12 @@ def main():
                     # si la llamada falló no hay respuesta que revisar: no cuenta como olvido
                     row.append(f"{v}: error")
                     continue
-                reply = r.get("reply") or ""
+                # con --sin-contenido no se guardó la respuesta: no hay nada que revisar,
+                # y contarlo como "no" haría parecer que la versión olvidó el dato
+                if "reply" not in r:
+                    row.append(f"{v}: sin contenido")
+                    continue
+                reply = r["reply"] or ""
                 # "expect" puede ser un texto o una lista: todos deben aparecer en la respuesta
                 expected = step["expect"] if isinstance(step["expect"], list) else [step["expect"]]
                 ok = all(e.lower() in reply.lower() for e in expected)

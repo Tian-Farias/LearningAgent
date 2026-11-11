@@ -27,7 +27,7 @@ def validate_config(config):
 # Lee y valida la configuración desde el archivo TOML.
 # El modelo usa el formato "proveedor/modelo" de litellm, y la variable de entorno
 # MODEL tiene prioridad sobre el archivo.
-# memory.dir es relativo a la carpeta de esta versión; una ruta absoluta se respeta.
+# memory.dir es relativo a la carpeta de esta versión. Una ruta absoluta se respeta.
 def load_config(path=CONFIG_PATH):
     with open(path, "rb") as f:
         config = tomllib.load(f)

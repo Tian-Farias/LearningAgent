@@ -1,14 +1,16 @@
 # lagent-v003: compactación de memoria
 
+> **Arco 1: memoria**, capítulo 3 de 3 · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Anterior: [v002, ventana de memoria](../lagent-v002/README.md) · Siguiente: v004, herramientas y bucle (en preparación, ver la [hoja de ruta](../TODO.md#v004-tools-y-loop))
+
 ## En una frase
 
 Agregamos la compactación: cuando la conversación supera un umbral de tokens, resumimos los mensajes viejos con el modelo y los reemplazamos por el resumen.
 
 ## El problema que resuelve
 
-v002 dejó de crecer sin límite, pero a cambio el modelo olvida de golpe. Un dato dicho al principio, como un nombre o una decisión, desaparece sin aviso cuando sale de la ventana. Además, la ventana cuenta mensajes, así que es ciega al tamaño: unos pocos mensajes muy largos todavía pueden costar mucho o superar el límite de contexto.
+[v002](../lagent-v002/README.md) dejó de crecer sin límite, pero a cambio el modelo olvida de golpe. Un dato dicho al principio, como un nombre o una decisión, desaparece sin aviso cuando sale de la ventana. Además, la ventana cuenta mensajes, así que es ciega al tamaño: unos pocos mensajes muy largos todavía pueden costar mucho o superar el límite de contexto.
 
-Necesitamos una memoria acotada que conserve lo importante de lo que ya pasó, y que reaccione al tamaño real de la conversación.
+Necesitamos una memoria acotada que conserve lo importante de lo que ya pasó, y que reaccione al tamaño real de la conversación. Es el último capítulo del [arco de la memoria](../README.md#arco-1-memoria), y une lo que lograron los dos anteriores: recordar, como v001, con un costo acotado, como v002.
 
 ## Qué hay en esta carpeta
 
@@ -21,7 +23,7 @@ Necesitamos una memoria acotada que conserve lo importante de lo que ya pasó, y
 | `commands.py` | Suma el comando `/memoria`. `/clear` borra también el resumen. | Modificado |
 | `config.py` | Valida las claves nuevas. | Modificado |
 | `lagent.toml` | Cambia `window` por `compact_at_tokens` y `keep_recent_turns`. | Modificado |
-| `mem_session/` | Carpeta de las sesiones. Reemplaza a la carpeta `memory/` que quedaba en v002. | Nuevo |
+| `mem_session/` | Carpeta de las sesiones, igual que en v002. Lo que cambia es el formato del archivo de cada sesión. | Sin cambios |
 
 ## Cómo fluye un mensaje
 
@@ -136,7 +138,9 @@ El resumen tiene tres secciones fijas. El comentario explica para qué: le dan a
 SUMMARY_SECTIONS = ("## Hechos", "## Decisiones", "## Pendientes")
 ```
 
-En cada compactación el modelo recibe el resumen anterior junto con los mensajes nuevos, y su tarea es actualizarlo. Las instrucciones marcan dos cosas más: los datos concretos se copian literalmente, y los mensajes son material para resumir, así que el modelo no debe seguir lo que digan.
+En cada compactación el modelo recibe el resumen anterior junto con los mensajes nuevos, y su tarea es actualizarlo. Las instrucciones marcan dos cosas más: los datos concretos se copian literalmente, y los mensajes son material para resumir, así que el modelo no debe seguir lo que digan. Estas reglas son preventivas. En nuestras pruebas no vimos un resumen que se degradara ni un mensaje tomado como instrucción.
+
+El resumen lo pide el mismo modelo de la conversación. Un modelo dedicado a compactar suma complejidad, y la historia la agrega un paso a la vez: los modelos por rol llegan en v009, dentro del [arco 4](../TODO.md#arco-4-escala).
 
 `compaction.py`:
 
@@ -186,6 +190,8 @@ La validación también se vuelve más estricta. En v002 bastaba con que el arch
 
 El guardado cuida un detalle más. Sigue ocurriendo después de cada intercambio, y solo ahí, para que el archivo nunca termine en un mensaje sin respuesta. Si interrumpimos el programa o falla el envío, el archivo queda como estaba tras el último intercambio.
 
+El archivo guarda solo el resumen y los mensajes recientes. Podríamos conservar también el historial completo, por trazabilidad, y lo dejamos fuera por una razón didáctica: así el archivo muestra exactamente lo que el agente recuerda. Un historial paralelo haría dudar de dónde sale lo que el modelo sabe, y escondería la limitación de esta versión.
+
 ### Ver qué recuerda el agente
 
 Con un resumen de por medio, ya no es obvio qué sabe el modelo en cada momento. `/memoria` lo muestra: el resumen completo y los mensajes recientes, cada uno recortado a 200 caracteres.
@@ -206,7 +212,7 @@ def show_memory(memory):
 
 ### La configuración acompaña
 
-`lagent.toml` reemplaza `window` por dos claves. El archivo de v002 anticipaba, comentada, una clave `keep_recent = 6` medida en mensajes, y en esta versión esa idea llega como `keep_recent_turns`, medida en turnos.
+`lagent.toml` reemplaza `window` por dos claves. El archivo de v002 anticipaba, comentada, una clave `keep_recent = 6` medida en mensajes, y en esta versión esa idea llega como `keep_recent_turns`, medida en turnos. Antes de los benchmarks las pruebas eran manuales, así que buscamos límites claros y pequeños. Los valores actuales son los que quedaron después de esas pruebas.
 
 `lagent.toml`:
 
@@ -217,7 +223,7 @@ keep_recent_turns = 3       # v003: turnos recientes que se conservan, si caben
 
 ### Qué se gana, en números simulados
 
-El README raíz compara las tres versiones en una misma conversación de 80 mensajes de la persona, con `window = 8` en v002, y `compact_at_tokens = 8000` y `keep_recent_turns = 3` en v003. Son tokens estimados, con respuestas y resumen simulados, sin llamadas a la API. Sirven para ver la forma de cada curva y no el costo real.
+El [README raíz](../README.md#comparación-de-v001-v002-y-v003) compara las tres versiones en una misma conversación de 80 mensajes de la persona, con `window = 8` en v002, y `compact_at_tokens = 8000` y `keep_recent_turns = 3` en v003. Son tokens estimados, con respuestas y resumen simulados, sin llamadas a la API. Sirven para ver la forma de cada curva y no el costo real.
 
 | Mensaje | v001 | v002 | v003 |
 | --- | --- | --- | --- |
@@ -226,11 +232,11 @@ El README raíz compara las tres versiones en una misma conversación de 80 mens
 | 60 | 9111 | 537 | 1527 |
 | 80 | 12171 | 537 | 4587 |
 
-Hasta llegar al umbral, v003 cuesta lo mismo que v001. Al cruzarlo, el costo cae y vuelve a subir de forma acotada.
+Hasta llegar al umbral, v003 cuesta lo mismo que v001. Al cruzarlo, el costo cae y vuelve a subir de forma acotada. Para medirlo con un modelo real, y comprobar si el resumen conserva los datos, están los [benchmarks](../bench/README.md).
 
 ## Cómo probarlo
 
-Con el umbral de 8000 tokens la compactación tarda en aparecer. Para verla pronto, bajamos el umbral en `lagent.toml` a `compact_at_tokens = 800` y lo restauramos al terminar. Con un umbral tan bajo, un mensaje normal podría no caber, y el agente lo avisaría con una línea `[sin compactar: ...]`.
+Usamos las mismas variables de entorno de siempre (ver [Conectarse a un proveedor](../README.md#conectarse-a-un-proveedor)). Con el umbral de 8000 tokens la compactación tarda en aparecer. Para verla pronto, bajamos el umbral en `lagent.toml` a `compact_at_tokens = 800` y lo restauramos al terminar. Con un umbral tan bajo, un mensaje normal podría no caber, y el agente lo avisaría con una línea `[sin compactar: ...]`.
 
 ```bash
 cd lagent-v003
@@ -278,14 +284,8 @@ cp lagent-v002/mem_session/pruebas.json lagent-v003/mem_session/pruebas.json
 
 El resumen reemplaza. Los mensajes resumidos ya no se pueden recuperar, ni siquiera del archivo, y si el modelo omite algo al resumir, ese dato se pierde sin aviso. Un mensaje muy largo se resume en cuanto llega el siguiente, aunque la conversación siga hablando de él. Cada compactación es además una llamada más al modelo, y un resumen rechazado se paga y se vuelve a intentar con el próximo mensaje.
 
-Con esto cerramos el arco de la memoria, pero el agente todavía solo conversa: no puede hacer nada. v004 ataca esto con herramientas y un bucle de decisión.
+Con esto cerramos el [arco de la memoria](../README.md#arco-1-memoria), pero el agente todavía solo conversa: no puede hacer nada. v004 abre el [arco 2, de chat a agente](../TODO.md#arco-2-de-chat-a-agente), con herramientas y un bucle de decisión.
 
-## Preguntas para el autor
+---
 
-- ¿Por qué `compact_at_tokens = 8000` y `keep_recent_turns = 3`? ¿Probaste otros valores?
-- ¿Por qué pasamos de `keep_recent = 6` (en mensajes, en el archivo de v002) a `keep_recent_turns = 3` (en turnos)? ¿Hubo alguna falla que lo motivó?
-- ¿Por qué repartir el presupuesto en un cuarto para el resumen y un cuarto para los turnos recientes?
-- v002 conservaba el historial completo en disco y v003 lo reemplaza por el resumen. ¿Por qué dejamos de guardar el original? Es la limitación principal de esta versión y el código no cuenta el motivo.
-- ¿Por qué el resumen lo hace el mismo modelo de la conversación? `TODO.md` deja un rol de compactador para v009.
-- ¿Viste en la práctica que un resumen se degradara o que perdiera un dato? ¿Hubo algún mensaje que el modelo tomara como instrucción al resumir? Eso explicaría las reglas de las instrucciones con un caso real.
-- ¿Tienes mediciones con un modelo real? Las tablas del README raíz son simuladas y el dato "Aurora" sigue en v003 porque el resumen simulado lo incluye.
+> **Arco 1: memoria**, capítulo 3 de 3 · [Índice de la historia](../README.md#cómo-leer-esta-historia) · Anterior: [v002, ventana de memoria](../lagent-v002/README.md) · Siguiente: v004, herramientas y bucle (en preparación, ver la [hoja de ruta](../TODO.md#v004-tools-y-loop))

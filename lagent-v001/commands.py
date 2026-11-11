@@ -2,7 +2,7 @@
 
 from memory import save_memory
 
-# Sistema de comandos basicos para controlar el chat.
+# Sistema de comandos básicos para controlar el chat.
 # Recibe el historial para poder modificarlo (por ejemplo, /clear lo vacía).
 # Devuelve:
 #   - None: el texto no es un comando, hay que enviarlo al modelo.
