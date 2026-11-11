@@ -1,0 +1,315 @@
+[
+  {
+    "say": "Hola, me llamo Aurora y administro servidores Linux."
+  },
+  {
+    "say": "¿Qué es un sistema de archivos?"
+  },
+  {
+    "say": "Te cuento que trabajo desde Temuco."
+  },
+  {
+    "say": "¿Qué diferencia hay entre ext4 y btrfs?"
+  },
+  {
+    "say": "Mi distribución favorita es Debian, la uso hace años."
+  },
+  {
+    "say": "¿Cómo reviso el uso de disco por carpeta?"
+  },
+  {
+    "say": "¿Qué es un inodo?"
+  },
+  {
+    "say": "¿Cómo funcionan los permisos rwx en Linux?"
+  },
+  {
+    "say": "¿Qué es un proceso zombie?"
+  },
+  {
+    "say": "¿Te acuerdas de cómo me llamo?",
+    "expect": "Aurora"
+  },
+  {
+    "say": "¿Para qué sirve la memoria swap?"
+  },
+  {
+    "say": "El servidor principal que administro se llama orion-01."
+  },
+  {
+    "say": "¿Cómo programo una tarea con cron?"
+  },
+  {
+    "say": "¿Qué diferencia hay entre un hilo y un proceso?"
+  },
+  {
+    "say": "¿Qué es un socket?"
+  },
+  {
+    "say": "¿Qué hace systemd al arrancar el sistema?"
+  },
+  {
+    "say": "¿Cómo se monta un disco de forma permanente?"
+  },
+  {
+    "say": "¿Qué es LVM y para qué sirve?"
+  },
+  {
+    "say": "¿Cómo funciona un RAID 1?"
+  },
+  {
+    "say": "¿Desde qué ciudad trabajo?",
+    "expect": "Temuco"
+  },
+  {
+    "say": "¿Qué diferencia hay entre RAID 5 y RAID 10?"
+  },
+  {
+    "say": "¿Qué es un enlace simbólico?"
+  },
+  {
+    "say": "¿En qué se diferencia un enlace duro de uno simbólico?"
+  },
+  {
+    "say": "¿Cómo veo los puertos abiertos en un servidor?"
+  },
+  {
+    "say": "¿Qué es iptables?"
+  },
+  {
+    "say": "¿Qué ventajas tiene nftables sobre iptables?"
+  },
+  {
+    "say": "¿Cómo funciona SSH con llaves públicas?"
+  },
+  {
+    "say": "¿Cómo deshabilito el login por contraseña en SSH?"
+  },
+  {
+    "say": "¿Qué es fail2ban?"
+  },
+  {
+    "say": "Para que sepas, mi equipo usa Ansible para todo."
+  },
+  {
+    "say": "¿Cómo reviso los logs de un servicio con journalctl?"
+  },
+  {
+    "say": "¿Cómo roto logs con logrotate?"
+  },
+  {
+    "say": "¿Qué es la carga promedio (load average)?"
+  },
+  {
+    "say": "¿Cómo interpreto la salida de top?"
+  },
+  {
+    "say": "¿Cuál es mi distribución favorita?",
+    "expect": "Debian"
+  },
+  {
+    "say": "¿Qué diferencia hay entre top y htop?"
+  },
+  {
+    "say": "¿Qué es el OOM killer?"
+  },
+  {
+    "say": "¿Cómo limito la memoria de un proceso?"
+  },
+  {
+    "say": "¿Qué son los cgroups?"
+  },
+  {
+    "say": "¿Qué son los namespaces de Linux?"
+  },
+  {
+    "say": "¿Cómo se relacionan los contenedores con los namespaces?"
+  },
+  {
+    "say": "¿Qué diferencia hay entre Docker y Podman?"
+  },
+  {
+    "say": "¿Qué es una imagen de contenedor?"
+  },
+  {
+    "say": "¿Cómo reduzco el tamaño de una imagen Docker?"
+  },
+  {
+    "say": "¿Cómo se llama mi servidor principal?",
+    "expect": "orion-01"
+  },
+  {
+    "say": "¿Qué es un volumen en Docker?"
+  },
+  {
+    "say": "¿Qué es docker compose?"
+  },
+  {
+    "say": "¿Qué es Kubernetes en pocas palabras?"
+  },
+  {
+    "say": "¿Qué es un pod?"
+  },
+  {
+    "say": "¿Te acuerdas de cómo me llamo?",
+    "expect": "Aurora"
+  },
+  {
+    "say": "¿Qué diferencia hay entre un Deployment y un StatefulSet?"
+  },
+  {
+    "say": "¿Qué es un Ingress?"
+  },
+  {
+    "say": "¿Cómo funciona el DNS?"
+  },
+  {
+    "say": "¿Qué es un registro A y uno CNAME?"
+  },
+  {
+    "say": "Me mudé: ahora trabajo desde Valparaíso, ya no desde Temuco."
+  },
+  {
+    "say": "¿Para qué sirve /etc/hosts?"
+  },
+  {
+    "say": "¿Qué es DHCP?"
+  },
+  {
+    "say": "¿Cómo configuro una IP estática?"
+  },
+  {
+    "say": "¿Qué es NAT?"
+  },
+  {
+    "say": "¿Qué es una VPN?"
+  },
+  {
+    "say": "¿Qué diferencia hay entre WireGuard y OpenVPN?"
+  },
+  {
+    "say": "¿Cómo pruebo la latencia de red?"
+  },
+  {
+    "say": "¿Qué hace traceroute?"
+  },
+  {
+    "say": "¿Qué es MTU?"
+  },
+  {
+    "say": "¿Desde qué ciudad trabajo ahora?",
+    "expect": "Valparaíso"
+  },
+  {
+    "say": "¿Cómo funciona TLS?"
+  },
+  {
+    "say": "¿Qué es un certificado autofirmado?"
+  },
+  {
+    "say": "¿Cómo renuevo certificados con certbot?"
+  },
+  {
+    "say": "¿Qué es un proxy inverso?"
+  },
+  {
+    "say": "¿Qué diferencia hay entre Nginx y Apache?"
+  },
+  {
+    "say": "¿Cómo configuro un virtual host en Nginx?"
+  },
+  {
+    "say": "¿Qué es el balanceo de carga?"
+  },
+  {
+    "say": "¿Qué es un backup incremental?"
+  },
+  {
+    "say": "¿Cómo funciona rsync?"
+  },
+  {
+    "say": "¿Qué herramienta usa mi equipo para automatizar?",
+    "expect": "Ansible"
+  },
+  {
+    "say": "¿Qué estrategia de backup 3-2-1 recomiendas?"
+  },
+  {
+    "say": "¿Qué es un snapshot de disco?"
+  },
+  {
+    "say": "¿Cómo pruebo que un backup sirve?"
+  },
+  {
+    "say": "¿Qué es SELinux?"
+  },
+  {
+    "say": "¿Qué diferencia hay entre SELinux y AppArmor?"
+  },
+  {
+    "say": "¿Cómo audito quién inició sesión en un servidor?"
+  },
+  {
+    "say": "¿Qué es sudo y cómo se configura?"
+  },
+  {
+    "say": "¿Qué es un kernel panic?"
+  },
+  {
+    "say": "¿Cómo actualizo el kernel de forma segura?"
+  },
+  {
+    "say": "¿Cómo se llama mi servidor principal?",
+    "expect": "orion-01"
+  },
+  {
+    "say": "¿Qué son los módulos del kernel?"
+  },
+  {
+    "say": "¿Qué es GRUB?"
+  },
+  {
+    "say": "¿Cómo recupero un servidor que no arranca?"
+  },
+  {
+    "say": "¿Qué es el modo single user?"
+  },
+  {
+    "say": "¿Qué es Ansible?"
+  },
+  {
+    "say": "¿Qué diferencia hay entre Ansible y Terraform?"
+  },
+  {
+    "say": "¿Qué es la infraestructura como código?"
+  },
+  {
+    "say": "¿Qué es un playbook?"
+  },
+  {
+    "say": "¿Cómo manejo secretos en Ansible?"
+  },
+  {
+    "say": "¿Cuál es mi distribución favorita?",
+    "expect": "Debian"
+  },
+  {
+    "say": "¿Qué es Prometheus?"
+  },
+  {
+    "say": "¿Qué métricas básicas debería monitorear en un servidor?"
+  },
+  {
+    "say": "¿Qué es Grafana?"
+  },
+  {
+    "say": "¿Cómo configuro una alerta de disco lleno?"
+  },
+  {
+    "say": "Última pregunta: ¿cómo me llamo y desde dónde trabajo?",
+    "expect": [
+      "Aurora",
+      "Valparaíso"
+    ]
+  }
+]

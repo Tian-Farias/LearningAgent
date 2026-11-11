@@ -14,6 +14,7 @@ Cada versión es una carpeta independiente (`lagent-vXXX/`) que agrega una capac
 - Desde v002, cada versión lleva su propio archivo de configuración, `lagent.toml`.
 - El `main.py` de cada versión empieza con un comentario que explica qué hace.
 - Cada versión se puede ejecutar sola, desde cualquier carpeta.
+- La carpeta [bench/](bench/) tiene las herramientas para medir y comparar las versiones (ver [Benchmarks](#benchmarks)).
 
 ## Versiones
 
@@ -29,7 +30,7 @@ Cada versión es una carpeta independiente (`lagent-vXXX/`) que agrega una capac
 ## Requisitos
 
 - Python 3.11 o superior (desde `lagent-v002/` se usa `tomllib`)
-- [litellm](https://github.com/BerriAI/litellm): `pip install litellm`
+- [litellm](https://github.com/BerriAI/litellm): `pip install -r requirements.txt`
 - Variables de entorno:
   - `API_KEY`: clave de la API del proveedor.
   - `BASE_URL`: URL base del modelo.
@@ -174,7 +175,7 @@ Son tokens estimados con el contador local de `litellm`. **Las respuestas y el r
 
 v002 es la más barata, pero olvida. v001 lo recuerda todo, pero su costo crece sin límite. v003 conserva lo importante con un costo acotado, aunque hasta llegar al umbral cuesta lo mismo que v001.
 
-Para repetir la comparación con un modelo real, copia una misma sesión a las carpetas de cada versión y envía el mismo mensaje en las tres. v003 compacta antes de enviarlo si la sesión supera el umbral.
+Para repetir la comparación con un modelo real, copia una misma sesión a las carpetas de cada versión y envía el mismo mensaje en las tres. v003 compacta antes de enviarlo si la sesión supera el umbral. Para una medición completa, con una conversación guionada y preguntas de control, usa los [benchmarks](#benchmarks).
 
 #### Un mensaje enorme: por qué contar tokens y no mensajes
 
@@ -204,6 +205,26 @@ Los comandos empiezan con `/` y no se envían al modelo. No distinguen mayúscul
 | `/exit` o `/quit` | Sale del chat. |
 
 Cualquier otro texto que empiece con `/` muestra `Comando desconocido` y no se envía al modelo. También puedes salir con `Ctrl+C` o `Ctrl+D`.
+
+## Benchmarks
+
+La carpeta [bench/](bench/) mide las versiones con datos reales, sin modificar su código. Responde dos preguntas con números:
+
+1. **¿Cuánto cuesta cada versión?** Cuántos tokens se envían al modelo en cada mensaje y cuánto crece eso a lo largo de la conversación.
+2. **¿Cuánto recuerda cada versión?** Si después de muchos mensajes el agente todavía sabe lo que se le dijo al principio.
+
+Cada versión recibe la misma conversación guionada de 100 mensajes, con datos plantados en distintos momentos y preguntas de control cuya respuesta se conoce de antemano. `run.py` ejecuta una versión y registra cada llamada al modelo, y `report.py` compara las corridas:
+
+```bash
+cd bench
+BENCH_MOCK=1 python run.py ../lagent-v002 conversacion.json   # prueba sin llamar a la API
+python run.py ../lagent-v003 conversacion.json                 # medición real
+python report.py conversacion.json runs/*.jsonl
+```
+
+Una medición real de las cuatro versiones gasta del orden de 2 millones de tokens de entrada. Revisa el precio de tu modelo antes de lanzarla.
+
+El detalle de cómo funciona, qué se registra y cómo crear tus propios guiones está en el [README de bench](bench/README.md).
 
 ## Objetivo
 
