@@ -41,7 +41,7 @@ def send_message(model, system_prompt, messages, max_tokens=None):
 
 # Estima los tokens que ocuparía una conversación, sin llamar al modelo.
 # Es una estimación local: sirve también con proveedores que no informan el uso de tokens,
-# pero puede diferir un poco de lo que cobra el proveedor.
+# pero difiere de lo que cobra el proveedor.
 def count_tokens(model, system_prompt, messages):
     return litellm.token_counter(
         model=model,

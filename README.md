@@ -242,7 +242,7 @@ El archivo de la sesión guarda el resumen junto con los mensajes recientes (`{"
 
 El resumen tiene tres secciones fijas: `## Hechos`, `## Decisiones` y `## Pendientes`. En cada compactación, el modelo recibe el resumen anterior y lo actualiza con los mensajes nuevos, en vez de resumir un resumen. Así se reduce el riesgo de que se degrade con cada pasada. Si el resumen no cabe en el tamaño pedido, el modelo condensa primero lo ya resuelto y lo más antiguo.
 
-Cuando se compacta, se avisa cuántos tokens libera, según una estimación local que puede diferir un poco de lo que cobra el proveedor:
+Cuando se compacta, se avisa cuántos tokens libera, según una estimación local que difiere de lo que cobra el proveedor (en la [medición real](#resultados-de-una-medición-real), cerca de 1,5 veces más):
 
 ```text
 [compactación: 100 mensajes resumidos, 8040 -> 456 tokens estimados, 7584 liberados]
@@ -293,7 +293,7 @@ La ventana de v002 es ciega al tamaño. En esta conversación de 30 mensajes, si
 
 v002 sigue enviando siempre 7 mensajes, pero durante cuatro mensajes cuesta 13 veces más, y aun así olvida lo anterior. v003 avisa en el mensaje 20 y lo compacta en el 21. El costo de esa rapidez es que el log solo queda en el resumen: si la persona pregunta por una línea concreta en el mensaje 21, el modelo ya no la tiene.
 
-> **Limitación: el resumen reemplaza, y sigue sin haber acción.** Los mensajes resumidos ya no se pueden recuperar, ni siquiera del archivo, y si el modelo omite algo al resumir, ese dato se pierde sin aviso. En una conversación larga el resumen condensa lo más antiguo para hacer espacio, y ese detalle tampoco vuelve. Un mensaje muy largo se resume en cuanto llega el siguiente, aunque la conversación siga hablando de él. Cada compactación es al menos una llamada más al modelo, y un resumen rechazado se paga igual. Con esto la memoria queda mejor resuelta, pero el agente todavía solo conversa: no puede hacer nada. Las siguientes versiones tendrán que resolver esto.
+> **Limitación: el resumen reemplaza, y sigue sin haber acción.** Los mensajes resumidos ya no se pueden recuperar, ni siquiera del archivo, y si el modelo omite algo al resumir, ese dato se pierde sin aviso. En una conversación larga el resumen condensa lo más antiguo para hacer espacio, y ese detalle tampoco vuelve. Un mensaje muy largo se resume en cuanto llega el siguiente, aunque la conversación siga hablando de él. Cada compactación es al menos una llamada más al modelo, y un resumen rechazado se paga igual. El tamaño del resumen tampoco queda resuelto: el modelo ignora un tamaño pedido en tokens, y en la [medición real](#resultados-de-una-medición-real) 20 de las 33 llamadas de resumen se cortaron en el tope (el detalle está en el [capítulo de v003](lagent-v003/README.md#lo-que-todavía-falta)). Con esto la memoria queda mejor resuelta, pero el agente todavía solo conversa: no puede hacer nada. Las siguientes versiones tendrán que resolver esto.
 
 ### Comandos
 
@@ -324,7 +324,27 @@ python run.py ../lagent-v003 conversacion.json                 # medición real
 python report.py conversacion.json runs/*.jsonl
 ```
 
-Una medición real de las cuatro versiones gasta del orden de 2 millones de tokens de entrada. Revisa el precio de tu modelo antes de lanzarla.
+Una medición real de las cuatro versiones gasta varios millones de tokens de entrada. Revisa el precio de tu modelo antes de lanzarla.
+
+### Resultados de una medición real
+
+Medimos las cuatro versiones con `anthropic/claude-haiku-5-5`, la conversación guionada de 100 mensajes y la configuración de cada `lagent.toml`. Es una sola corrida por versión, y los modelos no responden siempre igual, así que las cifras varían entre corridas.
+
+| Versión | Llamadas | Tokens de entrada cobrados | Tokens de respuesta | Costo USD | Preguntas de control acertadas |
+|---------|----------|----------------------------|---------------------|-----------|--------------------------------|
+| v000 | 100 | 3633 | 89772 | 0.0452 | 1 de 10 |
+| v001 | 100 | 4756081 | 102043 | 0.5266 | 10 de 10 |
+| v002 | 100 | 342722 | 129785 | 0.0992 | 3 de 10 |
+| v003 | 133 | 1208933 | 267474 | 0.2546 | 10 de 10 |
+
+En total fueron 433 llamadas, 6,3 millones de tokens de entrada y 0,93 USD.
+
+- **v001 recuerda todo y es la más cara.** Acierta las 10 preguntas y gasta 4,8 millones de tokens de entrada.
+- **v002 ahorra más y olvida.** Frente a v001 gasta 90% menos tokens (entrada más salida) y cuesta 81% menos, pero acierta 3 de 10 preguntas.
+- **v003 recuerda con un costo acotado.** Acierta las 10 preguntas con 70% menos tokens que v001 y un costo 52% menor.
+- **Los resúmenes de v003 pesan.** Sus 33 llamadas de resumen suman 527516 tokens, el 36% de lo que gasta. De esas 33 llamadas, 20 llegaron al tope de tokens y se descartaron.
+- **La estimación local queda corta.** El proveedor cobró cerca de 1,5 veces los tokens que estima `litellm`. El umbral `compact_at_tokens` se compara contra la estimación, así que la conversación real es más grande que lo que indica ese número.
+- **Un acierto no prueba memoria.** La revisión busca el texto esperado dentro de la respuesta. v000, que no recuerda nada, acierta la pregunta del turno 95.
 
 El detalle de cómo funciona, qué se registra y cómo crear tus propios guiones está en el [README de bench](bench/README.md).
 

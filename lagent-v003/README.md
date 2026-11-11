@@ -89,7 +89,7 @@ El momento importa. Si compactáramos después de recibir la respuesta, una conv
 
 ### Un umbral en tokens
 
-El disparo se mide en tokens, porque el costo y el límite de contexto se miden en tokens: 20 mensajes cortos no justifican compactar, y 3 muy largos sí. Para saber cuánto ocupa la conversación antes de enviarla, `llm.py` suma una estimación local. Sirve también con proveedores que no informan el uso de tokens, a cambio de que puede diferir un poco de lo que cobran.
+El disparo se mide en tokens, porque el costo y el límite de contexto se miden en tokens: 20 mensajes cortos no justifican compactar, y 3 muy largos sí. Para saber cuánto ocupa la conversación antes de enviarla, `llm.py` suma una estimación local. Sirve también con proveedores que no informan el uso de tokens, a cambio de que difiere de lo que cobran: en la [medición real](#qué-se-gana-medido-con-un-modelo-real) el proveedor cobró cerca de 1,5 veces la estimación.
 
 `compaction.py`:
 
@@ -227,6 +227,8 @@ Cuando los dos intentos fallan, el historial queda intacto y volvemos a intentar
 
 Un resumen más grande que lo pedido deja menos espacio libre, y la siguiente compactación llega antes. Lo aceptamos porque un resumen completo sirve y uno cortado se descarta entero.
 
+Estas medidas evitan el bucle de fallos, pero la medición real muestra que el tamaño del resumen sigue sin control. Lo contamos en [Lo que todavía falta](#lo-que-todavía-falta).
+
 ### Un archivo de sesión nuevo
 
 Ahora la sesión tiene dos partes, así que el archivo pasa a ser `{"summary": ..., "messages": [...]}`. Las sesiones de v001 y v002 son una lista simple, y `load_memory` las sigue aceptando: se cargan sin resumen y se guardan en el formato nuevo.
@@ -286,6 +288,21 @@ El [README raíz](../README.md#comparación-de-v001-v002-y-v003) compara las tre
 
 Hasta llegar al umbral, v003 cuesta lo mismo que v001. Al cruzarlo, el costo cae y vuelve a subir de forma acotada. Para medirlo con un modelo real, y comprobar si el resumen conserva los datos, están los [benchmarks](../bench/README.md).
 
+### Qué se gana, medido con un modelo real
+
+Los [benchmarks](../bench/README.md) corrieron la conversación guionada de 100 mensajes con `anthropic/claude-haiku-5-5`, una corrida por versión. Las cifras varían entre corridas.
+
+| | v001 | v002 | v003 |
+| --- | --- | --- | --- |
+| Llamadas al modelo | 100 | 100 | 133 |
+| Tokens de entrada cobrados | 4756081 | 342722 | 1208933 |
+| Costo USD | 0.5266 | 0.0992 | 0.2546 |
+| Preguntas de control acertadas | 10 de 10 | 3 de 10 | 10 de 10 |
+
+v003 acierta las mismas preguntas que v001 con 70% menos tokens, contando entrada y salida, y un costo 52% menor. v002 sigue siendo la más barata, y olvida 7 de las 10 respuestas.
+
+El resumen tiene su precio. Las 33 llamadas de resumen suman 527516 tokens, el 36% de lo que gasta v003. De esas 33 llamadas, 20 llegaron al tope de tokens y se descartaron, incluso con el tope holgado y el segundo intento. El detalle está en [Lo que todavía falta](#lo-que-todavía-falta).
+
 ## Cómo probarlo
 
 Usamos las mismas variables de entorno de siempre (ver [Conectarse a un proveedor](../README.md#conectarse-a-un-proveedor)). Con el umbral de 8000 tokens la compactación tarda en aparecer. Para verla pronto, bajamos el umbral en `lagent.toml` a `compact_at_tokens = 800` y lo restauramos al terminar. Con un umbral tan bajo, un mensaje normal podría no caber, y el agente lo avisaría con una línea `[sin compactar: ...]`.
@@ -338,7 +355,19 @@ cp lagent-v002/mem_session/pruebas.json lagent-v003/mem_session/pruebas.json
 
 El resumen reemplaza. Los mensajes resumidos ya no se pueden recuperar, ni siquiera del archivo, y si el modelo omite algo al resumir, ese dato se pierde sin aviso. El resumen tiene además un tamaño pedido: en una conversación larga condensa lo más antiguo para hacer espacio, y ese detalle tampoco vuelve. Un mensaje muy largo se resume en cuanto llega el siguiente, aunque la conversación siga hablando de él. Cada compactación es al menos una llamada más al modelo, y un resumen rechazado se paga igual.
 
-La pérdida de lo resumido tiene su propio capítulo más adelante: v007 guardará lo compactado en un archivo que el agente puede consultar (ver la [hoja de ruta](../TODO.md#v007-memoria-consultable)).
+El tamaño del resumen queda sin resolver. En la [medición real](#qué-se-gana-medido-con-un-modelo-real), 20 de las 33 llamadas de resumen se cortaron en el tope, y el registro de esas llamadas muestra por qué:
+
+- **El modelo ignora el tamaño pedido en tokens.** Pedimos menos de 2000 tokens, y desde la tercera compactación los resúmenes completos midieron entre 3000 y 4600.
+- **El segundo intento acierta por azar.** Pide menos de 1000 tokens y devuelve entre 3000 y 4000, casi lo mismo que el primero. Funcionó en 6 de 13 casos.
+- **El resumen llena el espacio que tiene.** Con el tope en 4000 tokens hubo 12 cortes. Cuando subió a 5000, los resúmenes crecieron y hubo 8 cortes más.
+- **Se compacta muy seguido.** Un resumen del doble de lo previsto deja poco espacio libre, y la conversación de 100 mensajes necesitó una compactación cada 6 o 7 turnos.
+
+Un modelo no sabe contar tokens mientras escribe, así que una instrucción en tokens no cambia lo que produce. Hay dos caminos para resolverlo:
+
+1. Pedir el tamaño en algo que el modelo sí puede contar, como un máximo de palabras o de viñetas por sección, y que el segundo intento pida la mitad de esas mismas unidades.
+2. Quitarle al resumen la obligación de guardar el detalle. Si lo compactado queda en un archivo que el agente puede consultar, el resumen puede ser breve y dejar solo una referencia.
+
+Ninguno de los dos está probado todavía. Dejamos este capítulo simple, con el problema a la vista. La pérdida de lo resumido y el tamaño del resumen se retoman en v007, que guardará lo compactado en un archivo que el agente puede consultar (ver la [hoja de ruta](../TODO.md#v007-memoria-consultable)).
 
 Con esto cerramos el [arco de la memoria](../README.md#arco-1-memoria), pero el agente todavía solo conversa: no puede hacer nada. v004 abre el [arco 2, de chat a agente](../TODO.md#arco-2-de-chat-a-agente), con herramientas y un bucle de decisión.
 

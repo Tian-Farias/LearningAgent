@@ -76,6 +76,8 @@ Resuelve: lo que la compactación resume o condensa ya no se puede recuperar (la
 - [ ] Guardar completos, en un archivo de la sesión, los mensajes que la compactación reemplaza
 - [ ] Tool para buscar en ese archivo, primero por palabras clave
 - [ ] El resumen deja una referencia a lo que condensó, para que el modelo sepa que puede buscarlo
+- [ ] Pedir el tamaño del resumen en palabras o viñetas por sección, que el modelo sí puede contar (en v003 ignora el tamaño pedido en tokens y 20 de 33 llamadas de resumen se cortaron)
+- [ ] Repetir la medición de v003 y comparar las llamadas de resumen cortadas y el tamaño de los resúmenes
 - [ ] Tres niveles de memoria: mensajes recientes, resumen y archivo consultable como último recurso
 - [ ] README: explicar la limitación que deja, la búsqueda por palabras no encuentra sinónimos ni paráfrasis (lo que motiva una búsqueda por embeddings)
 
@@ -127,3 +129,5 @@ Resuelve: tareas grandes que no caben en un solo contexto.
 - [ ] Cada versión con su fila en la tabla del README y su sección de limitaciones
 - [ ] Mantener cada versión ejecutable sola
 - [ ] Ejemplos reproducibles en el README para comparar versiones con la misma entrada
+- [ ] Bench: registrar los tokens de razonamiento de cada llamada. En la medición de v003, dos llamadas de resumen gastaron el tope con la mitad del texto que las demás, y el registro actual no permite saber en qué
+- [ ] Regenerar la tabla simulada de 80 mensajes del README raíz, porque las instrucciones del resumen cambiaron de tamaño

@@ -113,7 +113,7 @@ done
 
 Cada corrida deja un archivo en `runs/`, por ejemplo `runs/lagent-v001-bench-20261111-110500.jsonl`.
 
-> **Ojo con el costo.** v001 envía toda la conversación en cada mensaje, así que en 100 turnos acumula muchos tokens. Entre las cuatro versiones son unas 400 llamadas y del orden de 2 millones de tokens de entrada. Revisa el precio de tu modelo antes de lanzarlo. Una opción es empezar por v002 y v003, y correr v001 al final.
+> **Ojo con el costo.** v001 envía toda la conversación en cada mensaje, así que en 100 turnos acumula muchos tokens. Con `anthropic/claude-haiku-5-5`, las cuatro versiones sumaron 433 llamadas, 6,3 millones de tokens de entrada y 0,93 USD. Revisa el precio de tu modelo antes de lanzarlo. Una opción es empezar por v002 y v003, y correr v001 al final.
 
 ### 3. Ver los resultados
 
@@ -121,32 +121,44 @@ Cada corrida deja un archivo en `runs/`, por ejemplo `runs/lagent-v001-bench-202
 python report.py conversacion.json runs/*.jsonl
 ```
 
-El reporte tiene hasta cuatro partes. La primera resume cada versión. Este ejemplo sale de una prueba con `BENCH_MOCK=1`, por eso `tok. cobrados` vale 0 y solo la estimación local tiene sentido:
+El reporte tiene hasta cuatro partes. La primera resume cada versión. Este ejemplo sale de una medición real con `anthropic/claude-haiku-5-5`, una corrida por versión:
 
 ```text
 versión      llamadas  errores resum. ok resum. mal  tok. cobrados  tok. estimados  tok. resp.  costo USD
-lagent-v001       100        0         0          0              0         1471970        2000     0.0011
-lagent-v002       100        0         0          0              0           89340        2000     0.0011
-lagent-v003       103        0         3          0              0          438523        2060     0.0011
+lagent-v000       100        0         0          0           3633            2970       89772     0.0452
+lagent-v001       100        0         0          0        4756081         3116067      102043     0.5266
+lagent-v002       100        0         0          0         342722          222902      129785     0.0992
+lagent-v003       133        0        13         20        1208933          784388      267474     0.2546
 ```
 
-- **llamadas:** cuántas veces se llamó al modelo. En v003 hay más llamadas que turnos porque cada compactación es una llamada extra.
+- **llamadas:** cuántas veces se llamó al modelo. En v003 hay más llamadas que turnos porque cada compactación suma una llamada de resumen, o dos si la primera se corta.
 - **errores:** llamadas que fallaron.
-- **resum. ok** y **resum. mal:** compactaciones de memoria que salieron bien y que fallaron. Una falla si la llamada da error o si el resumen se cortó por el tope de tokens.
-- **tok. cobrados:** tokens enviados según informa el proveedor, en las llamadas exitosas. Es lo que se cobra.
-- **tok. estimados:** tokens enviados según la estimación local, incluidas las llamadas que fallaron.
+- **resum. ok** y **resum. mal:** llamadas de resumen que salieron bien y que fallaron. Una falla si la llamada da error o si el resumen se cortó por el tope de tokens. v003 vuelve a pedir un resumen cortado en el mismo turno, así que una misma compactación puede sumar una llamada mala y una buena. En el ejemplo, 20 de las 33 llamadas de resumen se cortaron.
+- **tok. cobrados:** tokens enviados según informa el proveedor, en las llamadas exitosas. Es lo que se cobra. Con `BENCH_MOCK=1` vale 0 y solo la estimación local tiene sentido.
+- **tok. estimados:** tokens enviados según la estimación local, incluidas las llamadas que fallaron. En el ejemplo, el proveedor cobró cerca de 1,5 veces la estimación.
 - **tok. resp.:** tokens que respondió el modelo.
 - **costo USD:** costo calculado con la tabla de precios de litellm. Aparece `s/d` (sin dato) si litellm no conoce el precio del modelo.
 
-La segunda parte aparece si entre las corridas está v001. Compara cada versión con ella en tokens cobrados, de entrada y de salida, y suma a v003 lo que gastan sus compactaciones. Con `BENCH_MOCK=1` no hay tokens cobrados, así que estos números no dicen nada.
+La segunda parte aparece si entre las corridas está v001. Compara cada versión con ella en tokens cobrados, de entrada y de salida, y suma a v003 lo que gastan sus compactaciones. En la misma medición:
+
+```text
+Ahorro frente a lagent-v001 (tokens cobrados, entrada + salida)
+  lagent-v002: chat 472507, resúmenes 0, total 472507. Ahorro neto 4385617 tokens (90%), costo 81% menor
+  lagent-v003: chat 948891, resúmenes 527516, total 1476407. Ahorro neto 3381717 tokens (70%), costo 52% menor
+```
+
+Los resúmenes son el 36% de lo que gasta v003. Con `BENCH_MOCK=1` no hay tokens cobrados, así que estos números no dicen nada.
 
 La tercera parte aparece solo si hubo errores, agrupados por su texto para ver rápido qué está fallando.
 
 La última parte revisa la memoria con las preguntas de control:
 
 ```text
-turno 50 «¿Te acuerdas de cómo me llamo?» -> lagent-v001: sí, lagent-v002: no, lagent-v003: sí
+turno 50 «¿Te acuerdas de cómo me llamo?» -> lagent-v000: no, lagent-v001: sí, lagent-v002: no, lagent-v003: sí
+turno 95 «¿Cuál es mi distribución favorita?» -> lagent-v000: sí, lagent-v001: sí, lagent-v002: sí, lagent-v003: sí
 ```
+
+En esa medición, v001 y v003 acertaron las 10 preguntas, v002 acertó 3 y v000 acertó 1. La del turno 95 muestra el límite de la revisión: v000 no recuerda nada y aun así su respuesta contiene el texto esperado.
 
 Si la llamada de esa pregunta falló, aparece `error`, porque no hay respuesta que revisar y no corresponde contarlo como olvido. Por el mismo motivo, una corrida hecha con `--sin-contenido` muestra `sin contenido`.
 
