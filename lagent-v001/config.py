@@ -11,4 +11,4 @@ SYSTEM_PROMPT = "Eres un asistente útil."
 
 # Carpeta donde se guardan las sesiones, una por archivo. Se calcula desde este archivo
 # para que quede junto al código, sin importar desde dónde se ejecute.
-MEMORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory")
+MEMORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mem_session")
